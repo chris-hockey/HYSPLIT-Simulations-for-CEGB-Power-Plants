@@ -1,10 +1,10 @@
 #!/bin/bash
 # split_to_months.sh
 
-RAW_PRESSURE="/home/chris/Documents/hysplit_test/data/raw/pressures"
-RAW_SINGLES="/home/chris/Documents/hysplit_test/data/raw/singles"
-INT_PRESSURE="/home/chris/Documents/hysplit_test/data/intermediate/pressures"
-INT_SINGLES="/home/chris/Documents/hysplit_test/data/intermediate/singles"
+RAW_PRESSURE="/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/data/raw/pressures"
+RAW_SINGLES="/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/data/raw/singles"
+INT_PRESSURE="/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/data/intermediate/pressures"
+INT_SINGLES="/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/data/intermediate/singles"
 
 mkdir -p $INT_PRESSURE $INT_SINGLES
 
