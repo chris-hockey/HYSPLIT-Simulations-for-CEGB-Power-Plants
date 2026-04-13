@@ -9,7 +9,7 @@ os.makedirs(PRESSURE_DIR, exist_ok=True)
 os.makedirs(SINGLES_DIR, exist_ok=True)
 PRESSURE_DATASET = "reanalysis-era5-pressure-levels"
 SINGLES_DATASET = "reanalysis-era5-single-levels"
-years = [str(y) for y in range(1983, 1988)]
+years = [str(y) for y in range(1974, 1988)]
 
 client = cdsapi.Client()
 
