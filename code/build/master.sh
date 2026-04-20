@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cd /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/code/build/build
+cd /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/code/build/
 
 echo "Converting Annual Data to Monthly Data"
 ./2_convert_monthly.sh
