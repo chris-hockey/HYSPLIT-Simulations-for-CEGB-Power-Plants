@@ -1,17 +1,30 @@
-# HYSPLIT GUI Setup on Fedora 43 — What We Did and Why
+# HYSPLIT GUI Launch Fix on Fedora 43
 
----
+## Claude Summary:
 
-## The Problem
+## The problem
 
-The HYSPLIT GUI is a Tcl/Tk script (`guicode/hysplit.tcl`). When launched,
-it crashed immediately with:
+When launching the HYSPLIT GUI on Fedora 43 with:
+
+```bash
+wish ~/opt/hysplit/hysplit.v5.4.2_RHEL9.7_public/guicode/hysplit.tcl &
+```
+
+It crashed with:
 
 ```
-can't read "tcl_dir": no such variable
+Error in startup script: can't read "tcl_dir": no such variable
+    while executing
+"file join $tcl_dir .. guicode htmlbrws.tcl "
+    (in namespace eval "::html" script line 2)
 ```
 
-The error was on line 611, inside a `namespace eval html` block:
+## What was happening
+
+The GUI is a Tcl/Tk script. Early in the script, it sets a variable
+called `tcl_dir` holding the path to the guicode directory. Later,
+on line 611, it tries to use that variable from inside a `namespace
+eval html { ... }` block:
 
 ```tcl
 namespace eval html {
@@ -20,81 +33,55 @@ namespace eval html {
 }
 ```
 
-In Tcl, `namespace eval` executes in its own namespace context. The variable
-`tcl_dir` is set in the global namespace, but inside `namespace eval html`,
-`$tcl_dir` looks for a namespace-local variable `html::tcl_dir` which does
-not exist. The correct way to reference a global variable from inside a
-namespace is `$::tcl_dir`.
+In Tcl, a `namespace eval` block creates its own variable scope.
+Inside that block, bare `$tcl_dir` refers to a variable inside the
+`html` namespace — which doesn't exist — rather than the global
+`tcl_dir` that was set outside.
 
-This is a bug in HYSPLIT's Tcl script — it worked on older versions of
-Tcl/Tk (as on Linux Mint) but fails on the newer Tcl/Tk shipped with
-Fedora 43.
+This bug has always been in the HYSPLIT GUI but went unnoticed on
+older versions of Tcl/Tk. The stricter variable scoping in the
+Tcl version shipped with Fedora 43 exposes it.
 
----
+## The fix
 
-## The Fix
-
-One line changed in `~/HYSPLIT/guicode/hysplit.tcl`:
+Change `$tcl_dir` to `$::tcl_dir` on line 611. The `::` prefix in Tcl
+means "look for this variable in the global namespace", which is
+where it was actually defined.
 
 ```bash
 sed -i \
   's|source \[file join \$tcl_dir \.\. guicode htmlbrws\.tcl \]|source [file join $::tcl_dir .. guicode htmlbrws.tcl ]|' \
-  ~/HYSPLIT/guicode/hysplit.tcl
+  ~/opt/hysplit/hysplit.v5.4.2_RHEL9.7_public/guicode/hysplit.tcl
 ```
 
-This replaces `$tcl_dir` with `$::tcl_dir` on line 611, making the global
-variable accessible from within the namespace.
-
----
-
-## Dead ends (do not repeat)
-
-During diagnosis we also patched lines 157 and 160 of `hysplit.tcl` to
-hardcode paths. These were reverted before applying the real fix:
+## How to launch the GUI
 
 ```bash
-sed -i \
-  's|source /home/chris/HYSPLIT/guicode/normalfile.tcl|source [file join [file dirname [info script] ] .. guicode normalfile.tcl]|' \
-  ~/HYSPLIT/guicode/hysplit.tcl
-
-sed -i \
-  's|set infoScriptDir /home/chris/HYSPLIT/guicode|set infoScriptDir [file dirname [info script] ]|' \
-  ~/HYSPLIT/guicode/hysplit.tcl
+cd ~/opt/hysplit/hysplit.v5.4.2_RHEL9.7_public/working
+wish ~/opt/hysplit/hysplit.v5.4.2_RHEL9.7_public/guicode/hysplit.tcl &
 ```
 
-Those lines should be in their original state. Only line 611 is changed.
-
----
-
-## Launching the GUI
-
-The GUI must be launched from `~/HYSPLIT/working` because it looks for
-`default_exec` in the current directory. `default_exec` contains all the
-directory paths the GUI needs.
-
-```bash
-cd ~/HYSPLIT/working
-wish ~/HYSPLIT/guicode/hysplit.tcl &
-```
-
----
+The `cd` into `working/` matters — the GUI looks for `default_exec`
+in the current directory to locate the other HYSPLIT paths.
 
 ## Desktop launcher
 
-To launch from a desktop icon without opening a terminal:
+To avoid opening a terminal every time, create a desktop entry:
 
 ```bash
 cat > ~/.local/share/applications/hysplit.desktop << 'EOF'
 [Desktop Entry]
 Name=HYSPLIT
 Comment=HYSPLIT Dispersion Model GUI
-Exec=bash -c "cd /home/chris/HYSPLIT/working && wish /home/chris/HYSPLIT/guicode/hysplit.tcl"
-Icon=/home/chris/HYSPLIT/working/icon63.png
+Exec=bash -c "cd /home/chris/opt/hysplit/hysplit.v5.4.2_RHEL9.7_public/working && wish /home/chris/opt/hysplit/hysplit.v5.4.2_RHEL9.7_public/guicode/hysplit.tcl"
+Icon=/home/chris/opt/hysplit/hysplit.v5.4.2_RHEL9.7_public/guicode/hylogos.gif
 Terminal=false
 Type=Application
 Categories=Science;
 EOF
+
+update-desktop-database ~/.local/share/applications/
 ```
 
-The launcher will appear in the applications menu under Science. It can
-also be pinned to the taskbar.
+After this, HYSPLIT appears in the applications menu under Science
+and can be pinned to the taskbar.
