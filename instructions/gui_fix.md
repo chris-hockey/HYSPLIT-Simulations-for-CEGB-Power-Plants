@@ -1,7 +1,4 @@
 # HYSPLIT GUI Launch Fix on Fedora 43
-
-## Claude Summary:
-
 ## The problem
 
 When launching the HYSPLIT GUI on Fedora 43 with:
