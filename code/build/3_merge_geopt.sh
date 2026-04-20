@@ -3,7 +3,7 @@
 
 # create short symlink if it doesn't exist
 if [ ! -L /home/chris/htest ]; then
-    ln -s /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants /home/chris/htest
+    ln -s /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/home/chris/htest
 fi
 
 INT_SINGLES="/home/chris/htest/data/intermediate/singles"

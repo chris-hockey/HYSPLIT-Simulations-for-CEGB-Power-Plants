@@ -3,7 +3,7 @@ import cdsapi
 
 
 PRESSURE_DIR = "/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/data/raw/pressures"
-SINGLES_DIR = "/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plantsdata/raw/singles"
+SINGLES_DIR = "/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/data/raw/singles"
 
 os.makedirs(PRESSURE_DIR, exist_ok=True)
 os.makedirs(SINGLES_DIR, exist_ok=True)
