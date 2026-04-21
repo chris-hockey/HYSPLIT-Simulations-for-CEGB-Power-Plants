@@ -1,9 +1,9 @@
 /data/
 /code/testing/gis/
-/code/build/ERA52ARL.MESSAGE
-/code/build/MESSAGE
-/code/build/WARNING
-/code/build/arldata.cfg
-/code/build/era52arl.cfg
-/code/build/ERA52ARL.CFG
+/code/data processing/build/ERA52ARL.MESSAGE
+/code/data processing/build/MESSAGE
+/code/data processing/build/WARNING
+/code/data processing/build/arldata.cfg
+/code/data processing/build/era52arl.cfg
+/code/data processing/build/ERA52ARL.CFG
 /papers/
