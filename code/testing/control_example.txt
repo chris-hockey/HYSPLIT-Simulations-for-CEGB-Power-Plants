@@ -1,0 +1,38 @@
+# Production CONTROL template for one plant × one calendar month
+# Parameterised — fill YY MM DD HH, stack lat/lon/height, ARL filename, 
+# run hours, and output path/filename before each run.
+
+cat > CONTROL_${PLANT}_${YYYYMM} <<EOF
+${YY} ${MM} 01 00                  # start: YY MM DD HH (always 1st of month, 00Z)
+1                                  # number of source locations
+${LAT} ${LON} ${STACK_HT}          # lat lon height_AGL(m)
+${RUN_HRS}                         # run duration (hours; 744=Jan, 672=Feb, etc.)
+0                                  # vertical motion: 0 = use ERA5 omega
+10000.0                            # model top (m MSL) — above UK weather
+1                                  # number of met files
+${ARL_DIR}/
+era5_${YYYY}_${MM}.arl
+1                                  # number of pollutant types
+TEST                               # 4-char species ID
+1.0                                # emission rate (mass/hr; cancels in normalisation)
+${RUN_HRS}                         # emission duration (hours) = full month
+${YY} ${MM} 01 00 00               # emission start
+1                                  # number of concentration grids
+53.0 -2.0                          # grid centre (lat lon)
+0.05 0.05                          # grid spacing (degrees)
+8.0 10.0                           # grid span (degrees lat lon) → 160×200 cells
+0.0 0.0                            # heights: 0=use default levels
+${CONC_DIR}/
+cdump_${PLANT}_${YYYYMM}
+1                                  # number of vertical levels
+100                                # output height AGL (m)
+00 00 00 00 00                     # sampling start (00=simulation start)
+00 00 00 00 00                     # sampling end (00=simulation end)
+00 24 00                           # output interval DD HH MM — daily slices
+1                                  # number of particle size bins
+0.0 0.0 0.0                        # particle diameter, density, shape
+0.0 0.0 0.0 0.0 0.0               # dry deposition params (all 0 = no dry dep)
+0.0 0.0 0.0                        # wet removal params (all 0 = no wet rem)
+0.0                                # radioactive decay half-life (0=none)
+0.0                                # resuspension factor (0=none)
+EOF

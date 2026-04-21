@@ -1,0 +1,12 @@
+cat > ~/opt/hysplit/hysplit.v5.4.2_RHEL9.7_public/working/SETUP.CFG << 'EOF'
+&SETUP
+NUMPAR = 25000,
+MAXPAR = 25000,
+INITD = 0,
+KHMAX = 9999,
+DELT = 0.0,
+KDEF = 1,
+KBLS = 2,
+KBLT = 2,
+/
+EOF
