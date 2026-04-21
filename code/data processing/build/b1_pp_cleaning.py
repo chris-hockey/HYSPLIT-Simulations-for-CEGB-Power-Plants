@@ -40,7 +40,7 @@ cfpp.loc[cfpp["electricity_supplied_gwh"].notna(
 cfpp["electricity_supplied_gwh"] = cfpp["electricity_supplied_gwh"].clip(
     lower=0)
 
-cfpp = cfpp.rename(columns={"long": "plant_lon", "lat": "plant_lat",
+cfpp = cfpp.rename(columns={"long": "plant_long", "lat": "plant_lat",
                             "electricity_supplied_gwh": "gwh_output"})
 
 cfpp["thermal_efficiency_prop"] = cfpp["thermal_efficiency_pct"] / 100

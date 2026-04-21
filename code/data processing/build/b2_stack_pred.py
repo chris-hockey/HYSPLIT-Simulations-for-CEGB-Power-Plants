@@ -108,7 +108,7 @@ cfpp = cfpp.merge(
 assert cfpp[COL_STACK].notna().all(
 ), "Some panel rows have no stack height after merge."
 
-panel_path = OUT_DIR / "cegb_panel_with_stack.csv"
+panel_path = OUT_DIR / "cegb_panel_with_stacks.csv"
 cfpp.to_csv(panel_path, index=False)
 log.info("Wrote panel with stack heights: %d rows, %d plants to %s",
          len(cfpp), cfpp[COL_PLANT_ID].nunique(), panel_path)
