@@ -1,4 +1,3 @@
-import calendar
 import pandas as pd
 import xarray as xr
 import numpy as np
@@ -9,9 +8,11 @@ from pathlib import Path
 
 # ==============================================================================
 # Inputs
-PLANT_ID = "mdemd01"
-YEAR = 1975
-MONTH = 1
+PLANT_ID = "neyd29"
+YEAR_MAJ = 1982
+YEAR = 1983
+MONTH = "01"
+DAY = "01"
 
 BASE_DIR = Path(
     "/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants"
@@ -19,14 +20,16 @@ BASE_DIR = Path(
 
 PLANT_DATA_PATH = BASE_DIR / "data" / "final" / "cegb_panel_with_stacks.csv"
 
-KERNEL_PATH = (
+NC_PATH = (
     BASE_DIR
     / "data"
     / "final"
     / "sim_test"
-    / "kernels"
-    / "monthly"
-    / f"kernel_{PLANT_ID}_{YEAR}{MONTH:02d}.nc"
+    / "runs"
+    / f"{PLANT_ID}_{YEAR_MAJ}"
+    / MONTH
+    / f"day_{DAY}"
+    / f"cdump_{PLANT_ID}_{YEAR}{MONTH}_d{DAY}.nc"
 )
 
 OUT_PATH = (
@@ -34,7 +37,7 @@ OUT_PATH = (
     / "code"
     / "testing"
     / "visualising"
-    / f"{PLANT_ID}_{YEAR}{MONTH:02d}_monthly.png"
+    / f"{PLANT_ID}_{YEAR_MAJ}{MONTH}{DAY}_daily.png"
 )
 
 # ==============================================================================
@@ -51,16 +54,15 @@ plant_lat = float(row["plant_lat"])
 plant_lon = float(row["plant_long"])
 
 # ==============================================================================
-# Read monthly kernel
-ds = xr.open_dataset(KERNEL_PATH)
-kernel = ds["transport_kernel"]
-data = kernel.values
+# Read concentration data
+ds = xr.open_dataset(NC_PATH)
+conc = ds["TEST"].isel(levels=0, time=0)
+
+data = conc.values
 masked = np.where(data > 0, data, np.nan)
 
-# ==============================================================================
-# Labels
-month_name = calendar.month_abbr[MONTH]
-title = f"{plant_name} monthly transport kernel — {month_name} {YEAR}"
+# Avoid warnings from log(0) / log(nan)
+log_masked = np.log(masked)
 
 # ==============================================================================
 # Plot
@@ -73,9 +75,9 @@ ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
 ax.add_feature(cfeature.BORDERS, linewidth=0.5)
 
 im = ax.pcolormesh(
-    kernel.longitude,
-    kernel.latitude,
-    np.log(masked),
+    conc.longitude,
+    conc.latitude,
+    log_masked,
     cmap="YlOrRd",
     transform=ccrs.PlateCarree(),
 )
@@ -89,8 +91,10 @@ ax.plot(
     label=plant_name,
 )
 
-plt.colorbar(im, ax=ax, label="ln(transport kernel)", shrink=0.7)
-ax.set_title(title)
+plt.colorbar(im, ax=ax, label="ln(concentration)", shrink=0.7)
+ax.set_title(
+    f"{plant_name} single-day kernel — {int(DAY)} {MONTH} {YEAR_MAJ + 1} (72h)"
+)
 ax.legend()
 
 plt.tight_layout()

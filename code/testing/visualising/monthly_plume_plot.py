@@ -9,15 +9,15 @@ from pathlib import Path
 
 # ==============================================================================
 # Inputs
-PLANT_ID = "mdemd01"
-YEAR = 1975
+PLANT_ID = "neyd06"
+YEAR = 1982
 MONTH = 1
 
 BASE_DIR = Path(
     "/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants"
 )
 
-PLANT_DATA_PATH = BASE_DIR / "data" / "final" / "cegb_panel_with_stacks.csv"
+PLANT_DATA_PATH = BASE_DIR / "data" / "final" / "your_plant_panel.csv"
 
 KERNEL_PATH = (
     BASE_DIR

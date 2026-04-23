@@ -1,4 +1,4 @@
-# Production CONTROL template for one plant × one calendar month
+# Production CONTROL template for one plant * one calendar month
 # Parameterised — fill YY MM DD HH, stack lat/lon/height, ARL filename, 
 # run hours, and output path/filename before each run.
 

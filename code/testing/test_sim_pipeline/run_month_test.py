@@ -1,6 +1,6 @@
 from hysplit import PlantYear, MonthlyKernel
 
-PLANT_ID = "neyd29"
+PLANT_ID = "sest05"
 YEAR_MAJ = 1974
 CAL_YEAR = 1975
 CAL_MONTH = 1

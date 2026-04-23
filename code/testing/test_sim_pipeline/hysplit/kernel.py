@@ -27,7 +27,7 @@ def _execute_run(run: HYSPLITRun) -> Path:
 class MonthlyKernel:
     """
     All daily runs for one plant x calendar month.
-    Averages daily 72-hour kernels into one monthly kernel NetCDF.
+    Sums daily 72-hour kernels into one monthly kernel NetCDF.
     Aborts on any failure.
     """
     plant:    Plant
@@ -96,11 +96,11 @@ class MonthlyKernel:
                 f"Error: {e}"
             )
 
-        # sort by day to ensure consistent ordering before averaging
+        # sort by day to ensure consistent ordering before summing
         nc_paths = [nc_paths_by_day[d] for d in sorted(nc_paths_by_day)]
-        return self._average_and_save(nc_paths)
+        return self._sum_and_save(nc_paths)
 
-    def _average_and_save(self, nc_paths: list[Path]) -> Path:
+    def _sum_and_save(self, nc_paths: list[Path]) -> Path:
         grids = []
         for nc in nc_paths:
             ds = xr.open_dataset(nc)
@@ -128,9 +128,9 @@ class MonthlyKernel:
                 "run_hrs":     72,
                 "emit_hrs":    24,
                 "description": (
-                    "Monthly average transport kernel. Mean 72-hour "
-                    "concentration from a unit 24-hour release, "
-                    "averaged across all days in the month."
+                    "Monthly total transport kernel. Sum of 72-hour "
+                    "time-integrated concentrations from unit 24-hour "
+                    "daily releases, across all days in the month."
                 ),
             },
         )
@@ -145,7 +145,7 @@ class AnnualKernel:
     """
     Annual transport kernel for one plant-year.
     Runs 12 MonthlyKernels (April year_maj through March year_maj+1),
-    averages them into one annual kernel NetCDF.
+    sums them into one annual kernel NetCDF.
     Aborts on any failure.
     """
     plant_year:      PlantYear
@@ -176,7 +176,7 @@ class AnnualKernel:
 
     def execute(self, overwrite: bool = False) -> Path:
         """
-        Run all 12 monthly kernels and average into annual kernel.
+        Run all 12 monthly kernels and sum them into the annual kernel.
         Raises RuntimeError on any failure — nothing is saved partially.
         Returns annual kernel path.
         """
@@ -194,9 +194,9 @@ class AnnualKernel:
             path = mk.execute(overwrite=overwrite)
             monthly_paths.append(path)
 
-        return self._average_and_save(monthly_paths)
+        return self._sum_and_save(monthly_paths)
 
-    def _average_and_save(self, monthly_paths: list[Path]) -> Path:
+    def _sum_and_save(self, monthly_paths: list[Path]) -> Path:
         grids = []
         for mp in monthly_paths:
             ds = xr.open_dataset(mp)
@@ -223,7 +223,7 @@ class AnnualKernel:
                 "run_hrs":        72,
                 "emit_hrs":       24,
                 "description": (
-                    "Annual average transport kernel. Mean of 12 monthly "
+                    "Annual total transport kernel. Sum of 12 monthly "
                     "kernels, April year_maj through March year_maj+1. "
                     "Fuel input stored as attribute for downstream scaling."
                 ),

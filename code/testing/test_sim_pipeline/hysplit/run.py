@@ -52,7 +52,7 @@ class HYSPLITRun:
     tracks for RUN_HRS hours total. Produces one concentration record.
     """
     plant:    Plant
-    year_maj: int      # majority year of financial year - for directory naming only
+    year_maj: int      # for directory naming only
     year:     int      # calendar year
     month:    int      # calendar month
     day:      int
@@ -161,9 +161,16 @@ class HYSPLITRun:
         """
         Write HYSPLIT config files, run `hycs_std`, and convert the output to NetCDF.
 
+        Idempotent: if the NetCDF output already exists and is non-empty,
+        returns without re-running. Safe to call on resume after a failed
+        monthly kernel.
+
         Raises:
             RuntimeError: If the HYSPLIT run or NetCDF conversion fails.
         """
+        if self.nc_path.exists() and self.nc_path.stat().st_size > 0:
+            return
+
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self._write_setup_cfg()
         self._write_control()

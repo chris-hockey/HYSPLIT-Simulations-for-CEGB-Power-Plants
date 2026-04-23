@@ -4,8 +4,8 @@ from hysplit import PlantYear, AnnualKernel
 
 start = time.time()
 
-PLANT_ID = "mdemd01"
-YEAR_MAJ = 1974
+PLANT_ID = "neyd06"
+YEAR_MAJ = 1982
 
 plant_year = PlantYear.from_panel(
     plant_id=PLANT_ID,
