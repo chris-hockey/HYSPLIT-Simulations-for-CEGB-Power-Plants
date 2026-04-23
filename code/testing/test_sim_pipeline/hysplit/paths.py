@@ -1,5 +1,5 @@
 """
-Global list of file paths called upon
+Global list of file paths and simulation parameters called upon
 """
 
 from pathlib import Path
@@ -22,7 +22,6 @@ PANEL_PATH = PROJECT_ROOT / "data/final/cegb_panel_with_stacks.csv"
 # simulation outputs
 SIM_ROOT = PROJECT_ROOT / "data/final/sim_test"
 RUNS_DIR = SIM_ROOT / "runs"
-MONTHLY_DIR = SIM_ROOT / "kernels/monthly"
 ANNUAL_DIR = SIM_ROOT / "kernels/annual"
 
 # grid
@@ -32,5 +31,7 @@ GRID_SPAN = (10.0, 14.0)   # degrees lat, lon
 OUTPUT_HT_M = 100           # AGL metres
 
 #  simulation parameters
-RUN_HRS = 72  # track tracer particle for this long
-EMIT_HRS = 24  # emit tracer particle from plant for this long
+TAIL_HRS = 72        # hours after emission stop for particles to clear
+SAMPLE_HRS = 24        # output averaging interval (daily means)
+NUMPAR = 500_000   # total particles across a full FY (~57/hr release)
+MAXPAR = 15_000    # cap on particles on grid at any instant
