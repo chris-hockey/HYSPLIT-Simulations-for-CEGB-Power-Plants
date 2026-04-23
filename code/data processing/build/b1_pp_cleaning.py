@@ -48,7 +48,11 @@ cfpp["fuel_input_gwh"] = (cfpp["gwh_output"] / cfpp["thermal_efficiency_prop"]
                           ).where(cfpp["thermal_efficiency_prop"] > 0, 0.0)
 
 cfpp_trimmed = (
-    cfpp[cfpp["year_maj"] >= 1974]
+    cfpp[
+        (cfpp["year_maj"] >= 1974)
+        & (cfpp["fuel_cat"].isin(PLANT_TYPES))
+        & (cfpp["fuel_input_gwh"].fillna(0) > 0)
+    ]
     .drop_duplicates(subset=["plant_id", "year_maj"])
     .copy()
 )

@@ -9,7 +9,7 @@ os.makedirs(PRESSURE_DIR, exist_ok=True)
 os.makedirs(SINGLES_DIR, exist_ok=True)
 PRESSURE_DATASET = "reanalysis-era5-pressure-levels"
 SINGLES_DATASET = "reanalysis-era5-single-levels"
-years = [str(y) for y in range(1974, 1988)]
+years = [str(y) for y in range(1973, 1988)]
 
 client = cdsapi.Client()
 
@@ -36,7 +36,7 @@ for year in years:
         "pressure_level": ["700", "850", "925", "1000"],
         "data_format": "grib",
         "download_format": "unarchived",
-        "area": [56.01297, -5.903322, 49.883132, 2.006834]
+        "area": [[61.0, -12.0, 47.0, 8.0]]
     }).download(os.path.join(PRESSURE_DIR, f"era5_pl_{year}.grib"))
     print(f"Pressure levels done: {year}")
 
@@ -63,7 +63,7 @@ for year in years:
         "time":  ["00:00", "06:00", "12:00", "18:00"],
         "data_format": "grib",
         "download_format": "unarchived",
-        "area": [56.01297, -5.903322, 49.883132, 2.006834]
+        "area": [[61.0, -12.0, 47.0, 8.0]]
     }).download(os.path.join(SINGLES_DIR, f"era5_sfc_an_{year}.grib"))
     print(f"Surface analysis done: {year}")
 

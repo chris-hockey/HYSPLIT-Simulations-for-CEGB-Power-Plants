@@ -66,7 +66,7 @@ class AnnualKernel:
     def _sum_and_save(self) -> Path:
         ds = xr.open_dataset(self.run.nc_path)
         conc = ds["TEST"].isel(levels=0)        # (time, lat, lon)
-        annual = conc.sum(dim="time") * SAMPLE_HRS             # (lat, lon)
+        annual = conc.sum(dim="time")          # (lat, lon)
         n_time = int(conc.sizes["time"])
 
         result = xr.Dataset(

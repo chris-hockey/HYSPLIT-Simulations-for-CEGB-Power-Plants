@@ -5,13 +5,11 @@ March t+1).
 Each HYSPLITRun emits continuously at unit rate from 00Z 1 April of 'year_maj'
 to 00Z of 1 April of 'year_maj' + 1, then tracks particle for 'TAIL_HRS" more
 hours so the final corhort (particles released towards the end of the year) can
-clear the domain. 
+clear the domain.
 
 Output sampled every 'SAMPLE_HRS' (24 hrs), overall producing 1 NetCDF file
 containing ~365 daily-mean concentrations.
 """
-
-from code.testing.test_sim_pipeline.hysplit import HYSPLITRun
 from __future__ import annotations
 import subprocess
 from dataclasses import dataclass, field
@@ -33,6 +31,9 @@ from .paths import (
     SAMPLE_HRS,
     RUNS_DIR,
 )
+
+# HYSPLIT compilation limit for the 1-grid-N-files CONTROL format.
+_MAX_FILES_PER_GRID = 128
 
 
 def _arl_filename(year: int, month: int) -> str:
@@ -73,13 +74,13 @@ class HYSPLITRun:
     00Z on 1 April `year_maj + 1`, then tracks TAIL_HRS more hours.
     Produces one cdump file with ~365 daily-mean concentration records.
     """
-    plant: Plant
-    year_maj: int
+    plant:      Plant
+    year_maj:   int
     cdump_path: Path = field(init=False, repr=False)
-    nc_path:  Path = field(init=False, repr=False)
-    run_dir:  Path = field(init=False, repr=False)
-    emit_hrs: int = field(init=False, repr=False)
-    run_hrs: int = field(init=False, repr=False)
+    nc_path:    Path = field(init=False, repr=False)
+    run_dir:    Path = field(init=False, repr=False)
+    emit_hrs:   int = field(init=False, repr=False)
+    run_hrs:    int = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.emit_hrs = _fy_emit_hours(self.year_maj)
@@ -120,7 +121,20 @@ class HYSPLITRun:
         yy, mm, dd, hh = start.year % 100, start.month, start.day, start.hour
 
         months = _months_covering(start, self.run_hrs)
-        n_met = len(months)
+        n_files = len(months)
+
+        # An FY run needs ~13 ARL files; the default (one-number) CONTROL
+        # format caps at 12, producing "DEFGRID limit" at runtime. The two-
+        # number form declares "1 grid, n_files files" and raises the
+        # per-grid cap to 128. All files share the same ARL_DIR, but the
+        # format still requires one (dir, filename) pair per file.
+        if n_files > _MAX_FILES_PER_GRID:
+            raise RuntimeError(
+                f"{n_files} ARL files needed for FY{self.year_maj}, "
+                f"exceeds HYSPLIT compilation limit of "
+                f"{_MAX_FILES_PER_GRID} per grid."
+            )
+        grid_header = f"1 {n_files}"
         met_block = "\n".join(
             f"{ARL_DIR}/\n{_arl_filename(y, m)}"
             for y, m in months
@@ -133,11 +147,11 @@ class HYSPLITRun:
             f"{self.run_hrs}",
             "0",
             "10000.0",
-            f"{n_met}",
+            grid_header,
             met_block,
             "1",
             "TEST",
-            "1.0",  # unit emission rate
+            "1.0",                                      # unit emission rate
             # continuous release, full FY
             f"{self.emit_hrs}",
             f"{yy:02d} {mm:02d} {dd:02d} {hh:02d} 00",  # emission start
@@ -149,8 +163,8 @@ class HYSPLITRun:
             self.cdump_path.name,
             "1",
             f"{OUTPUT_HT_M}",
-            "00 00 00 00 00",  # sample start = sim start
-            "00 00 00 00 00",  # sample stop  = sim end
+            "00 00 00 00 00",                           # sample start = sim start
+            "00 00 00 00 00",                           # sample stop  = sim end
             # daily averages, daily output
             f"00 {SAMPLE_HRS:02d} 00",
             "1",
@@ -167,7 +181,7 @@ class HYSPLITRun:
         """
         Write config files, run hycs_std, and convert cdump to NetCDF.
         Idempotent: returns immediately if the NetCDF already exists
-        and is non-empty
+        and is non-empty.
         """
         if self.nc_path.exists() and self.nc_path.stat().st_size > 0:
             return
