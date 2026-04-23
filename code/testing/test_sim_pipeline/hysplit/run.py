@@ -1,17 +1,21 @@
 """
-Utilities for configuring and running daily HYSPLIT concentration simulations.
+One HYSPLIT concentration simulation per plant financial year (1 April t - 31
+March t+1).
 
-This module defines helper functions for ARL file handling and date logic, and
-provides the `HYSPLITRun` class, which represents a single daily simulation for
-a given plant and date. A `HYSPLITRun` can write the required HYSPLIT config
-files, execute `hycs_std`, and convert the resulting concentration output to
-NetCDF.
+Each HYSPLITRun emits continuously at unit rate from 00Z 1 April of 'year_maj'
+to 00Z of 1 April of 'year_maj' + 1, then tracks particle for 'TAIL_HRS" more
+hours so the final corhort (particles released towards the end of the year) can
+clear the domain. 
+
+Output sampled every 'SAMPLE_HRS' (24 hrs), overall producing 1 NetCDF file
+containing ~365 daily-mean concentrations.
 """
 
+from code.testing.test_sim_pipeline.hysplit import HYSPLITRun
 from __future__ import annotations
-import calendar
 import subprocess
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from .plant import Plant
@@ -23,8 +27,10 @@ from .paths import (
     GRID_SPACING,
     GRID_SPAN,
     OUTPUT_HT_M,
-    RUN_HRS,
-    EMIT_HRS,
+    NUMPAR,
+    MAXPAR,
+    TAIL_HRS,
+    SAMPLE_HRS,
     RUNS_DIR,
 )
 
@@ -33,57 +39,63 @@ def _arl_filename(year: int, month: int) -> str:
     return f"era5_{year}_{month:02d}.arl"
 
 
-def _next_month(year: int, month: int) -> tuple[int, int]:
-    return (year + 1, 1) if month == 12 else (year, month + 1)
+def _fy_bounds(year_maj: int) -> tuple[datetime, datetime]:
+    """Financial year as 1 Apr year_maj 00Z, 1 Apr year_maj+1 00Z"""
+    return datetime(year_maj, 4, 1), datetime(year_maj + 1, 4, 1)
 
 
-def _spills_into_next_month(day: int, year: int, month: int) -> bool:
-    """True if a RUN_HRS run starting at day 00Z crosses into next month."""
-    n_days = calendar.monthrange(year, month)[1]
-    return (day - 1) * 24 + RUN_HRS > n_days * 24
+def _fy_emit_hours(year_maj: int) -> int:
+    """Hours in the FY (8760, or 8784 if spanning a leap Feb)."""
+    start, end = _fy_bounds(year_maj)
+    return int((end - start).total_seconds() // 3600)
+
+
+def _months_covering(start: datetime, hours: int) -> list[tuple[int, int]]:
+    """(year, month) pairs for each calendar month touched by [start, start+hours]"""
+    end = start + timedelta(hours=hours)
+    months: list[tuple[int, int]] = []
+    cur = start.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    while cur <= end:
+        months.append((cur.year, cur.month))
+        if cur.month == 12:
+            cur = cur.replace(year=cur.year + 1, month=1)
+        else:
+            cur = cur.replace(month=cur.month + 1)
+    return months
 
 
 @dataclass
 class HYSPLITRun:
     """
-    One daily HYSPLIT concentration simulation.
+    One HYSPLIT concentration simulation covering a full Apr-Mar financial year.
 
-    Releases emissions for EMIT_HRS hours from 00Z on (year, month, day),
-    tracks for RUN_HRS hours total. Produces one concentration record.
+    Emits continuously at unit rate from 00Z on 1 April `year_maj` through
+    00Z on 1 April `year_maj + 1`, then tracks TAIL_HRS more hours.
+    Produces one cdump file with ~365 daily-mean concentration records.
     """
-    plant:    Plant
-    year_maj: int      # for directory naming only
-    year:     int      # calendar year
-    month:    int      # calendar month
-    day:      int
+    plant: Plant
+    year_maj: int
     cdump_path: Path = field(init=False, repr=False)
-    nc_path:    Path = field(init=False, repr=False)
-    run_dir:    Path = field(init=False, repr=False)
+    nc_path:  Path = field(init=False, repr=False)
+    run_dir:  Path = field(init=False, repr=False)
+    emit_hrs: int = field(init=False, repr=False)
+    run_hrs: int = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        self.run_dir = (
-            RUNS_DIR
-            / f"{self.plant.plant_id}_{self.year_maj}"
-            / f"{self.month:02d}"
-            / f"day_{self.day:02d}"
-        )
-        tag = (
-            f"cdump_{self.plant.plant_id}"
-            f"_{self.year}{self.month:02d}"
-            f"_d{self.day:02d}"
-        )
+        self.emit_hrs = _fy_emit_hours(self.year_maj)
+        self.run_hrs = self.emit_hrs + TAIL_HRS
+
+        self.run_dir = RUNS_DIR / f"{self.plant.plant_id}_{self.year_maj}"
+        tag = f"cdump_{self.plant.plant_id}_{self.year_maj}"
         self.cdump_path = self.run_dir / tag
         self.nc_path = self.cdump_path.with_suffix(".nc")
 
-    # ------------------------------------------------------------------
-    # config writers
-    # ------------------------------------------------------------------
-
+    # config writers:
     def _write_setup_cfg(self) -> None:
         (self.run_dir / "SETUP.CFG").write_text(
             "&SETUP\n"
-            "NUMPAR = 10000,\n"
-            "MAXPAR = 10000,\n"
+            f"NUMPAR = {NUMPAR},\n"
+            f"MAXPAR = {MAXPAR},\n"
             "INITD = 0,\n"
             "KHMAX = 9999,\n"
             "DELT = 0.0,\n"
@@ -104,35 +116,31 @@ class HYSPLITRun:
         )
 
     def _write_control(self) -> None:
-        yy = self.year % 100
+        start, _ = _fy_bounds(self.year_maj)
+        yy, mm, dd, hh = start.year % 100, start.month, start.day, start.hour
 
-        if _spills_into_next_month(self.day, self.year, self.month):
-            ny, nm = _next_month(self.year, self.month)
-            n_met = 2
-            met_block = (
-                f"{ARL_DIR}/\n{_arl_filename(self.year, self.month)}\n"
-                f"{ARL_DIR}/\n{_arl_filename(ny, nm)}\n"
-            )
-        else:
-            n_met = 1
-            met_block = (
-                f"{ARL_DIR}/\n{_arl_filename(self.year, self.month)}\n"
-            )
+        months = _months_covering(start, self.run_hrs)
+        n_met = len(months)
+        met_block = "\n".join(
+            f"{ARL_DIR}/\n{_arl_filename(y, m)}"
+            for y, m in months
+        )
 
         lines = [
-            f"{yy:02d} {self.month:02d} {self.day:02d} 00",
+            f"{yy:02d} {mm:02d} {dd:02d} {hh:02d}",
             "1",
             f"{self.plant.lat} {self.plant.lon} {self.plant.stack_ht_m}",
-            f"{RUN_HRS}",
+            f"{self.run_hrs}",
             "0",
             "10000.0",
             f"{n_met}",
-            met_block.rstrip("\n"),
+            met_block,
             "1",
             "TEST",
-            "1.0",
-            f"{EMIT_HRS}",
-            f"{yy:02d} {self.month:02d} {self.day:02d} 00 00",
+            "1.0",  # unit emission rate
+            # continuous release, full FY
+            f"{self.emit_hrs}",
+            f"{yy:02d} {mm:02d} {dd:02d} {hh:02d} 00",  # emission start
             "1",
             f"{GRID_CENTRE[0]} {GRID_CENTRE[1]}",
             f"{GRID_SPACING[0]} {GRID_SPACING[1]}",
@@ -141,9 +149,10 @@ class HYSPLITRun:
             self.cdump_path.name,
             "1",
             f"{OUTPUT_HT_M}",
-            "00 00 00 00 00",
-            "00 00 00 00 00",
-            f"00 {RUN_HRS:02d} 00",
+            "00 00 00 00 00",  # sample start = sim start
+            "00 00 00 00 00",  # sample stop  = sim end
+            # daily averages, daily output
+            f"00 {SAMPLE_HRS:02d} 00",
             "1",
             "0.0 0.0 0.0",
             "0.0 0.0 0.0 0.0 0.0",
@@ -153,20 +162,12 @@ class HYSPLITRun:
         ]
         (self.run_dir / "CONTROL").write_text("\n".join(lines) + "\n")
 
-    # ------------------------------------------------------------------
-    # execution
-    # ------------------------------------------------------------------
-
+    # execution:
     def execute(self) -> None:
         """
-        Write HYSPLIT config files, run `hycs_std`, and convert the output to NetCDF.
-
-        Idempotent: if the NetCDF output already exists and is non-empty,
-        returns without re-running. Safe to call on resume after a failed
-        monthly kernel.
-
-        Raises:
-            RuntimeError: If the HYSPLIT run or NetCDF conversion fails.
+        Write config files, run hycs_std, and convert cdump to NetCDF.
+        Idempotent: returns immediately if the NetCDF already exists
+        and is non-empty
         """
         if self.nc_path.exists() and self.nc_path.stat().st_size > 0:
             return
@@ -204,7 +205,5 @@ class HYSPLITRun:
 
     @property
     def tag(self) -> str:
-        return (
-            f"{self.plant.plant_id} "
-            f"{self.year}-{self.month:02d}-{self.day:02d}"
-        )
+        yy_next = (self.year_maj + 1) % 100
+        return f"{self.plant.plant_id} FY{self.year_maj}/{yy_next:02d}"

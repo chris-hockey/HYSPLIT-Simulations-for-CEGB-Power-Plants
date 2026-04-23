@@ -19,14 +19,12 @@ print(
     f"Stack:        {plant_year.plant.stack_ht_m}m\n"
     f"Year maj:     {plant_year.year_maj}\n"
     f"Fuel input:   {plant_year.fuel_input_gwh} GWh\n"
-    f"Cal. months:  {plant_year.calendar_months()}\n"
 )
 
 kernel = AnnualKernel(plant_year=plant_year)
-result = kernel.execute()
+result = kernel.execute()          # or kernel.execute(overwrite=True)
 
-if result:
-    print(f"\nDone. Annual kernel at: {result}")
+print(f"\nDone. Annual kernel at: {result}")
 
 elapsed = time.time() - start
 print(f"Total time: {elapsed/60:.1f} minutes")
