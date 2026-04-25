@@ -11,7 +11,7 @@ if [ ! -e /home/chris/htest ]; then
     ln -s /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants /home/chris/htest
 fi
 
-INT_PRESSURE="/home/chris/htest/data/intermediate/pressures"
+RAW_PRESSURE="/home/chris/htest/data/raw/pressures"
 MERGED_SINGLES="/home/chris/htest/data/intermediate/singles_merged"
 FINAL="/home/chris/htest/data/final/arl"
 BUILD_DIR="$(dirname "$(realpath "$0")")"
@@ -24,10 +24,10 @@ echo "BUILD_DIR : $BUILD_DIR"
 echo "REF_CFG   : $REF_CFG"
 grep -E "numlev|plev|numsfc|sfcarl" "$REF_CFG"
 
-pl_files=("${INT_PRESSURE}"/era5_pl_????_??.grib)
+pl_files=("${RAW_PRESSURE}"/era5_pl_????_??.grib)
 
 if [ ${#pl_files[@]} -eq 0 ]; then
-    echo "WARNING: no monthly pressure files found in $INT_PRESSURE"
+    echo "WARNING: no monthly pressure files found in $RAW_PRESSURE"
     exit 1
 fi
 

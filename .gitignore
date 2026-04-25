@@ -1,11 +1,11 @@
 /data/
 /code/testing/gis/
 /code/data processing/build/ERA52ARL.MESSAGE
-/code/data processing/build/MESSAGE
-/code/data processing/build/WARNING
-/code/data processing/build/arldata.cfg
-/code/data processing/build/era52arl.cfg
-/code/data processing/build/ERA52ARL.CFG
+/code/data processing/era5/MESSAGE
+/code/data processing/era5/WARNING
+/code/data processing/era5/arldata.cfg
+/code/data processing/era5/era52arl.cfg
+/code/data processing/era5/ERA52ARL.CFG
 /papers/
 *.png
 /plots

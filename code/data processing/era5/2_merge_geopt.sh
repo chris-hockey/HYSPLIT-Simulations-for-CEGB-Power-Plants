@@ -6,7 +6,7 @@ if [ ! -L /home/chris/htest ]; then
     ln -s /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/home/chris/htest
 fi
 
-INT_SINGLES="/home/chris/htest/data/intermediate/singles"
+RAW_SINGLES="/home/chris/htest/data/raw/singles"
 GEOPOTENTIAL="/home/chris/htest/data/raw/geopot/geopot.grib"
 MERGED_SINGLES="/home/chris/htest/data/intermediate/singles_merged"
 
@@ -17,9 +17,9 @@ if [ ! -f "$GEOPOTENTIAL" ]; then
     exit 1
 fi
 
-for sfc_file in "$INT_SINGLES"/era5_sfc_an_????_??.grib; do
+for sfc_file in "$RAW_SINGLES"/era5_sfc_an_????_??.grib; do
     if [ ! -f "$sfc_file" ]; then
-        echo "WARNING: no monthly surface files found in $INT_SINGLES"
+        echo "WARNING: no monthly surface files found in $RAW_SINGLES"
         exit 1
     fi
 
