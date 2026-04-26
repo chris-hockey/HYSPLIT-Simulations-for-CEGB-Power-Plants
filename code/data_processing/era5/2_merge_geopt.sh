@@ -1,9 +1,10 @@
 #!/bin/bash
-# merge_geopot.sh
+set -euo pipefail
+shopt -s nullglob
 
 # create short symlink if it doesn't exist
 if [ ! -L /home/chris/htest ]; then
-    ln -s /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/home/chris/htest
+    ln -s /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants /home/chris/htest
 fi
 
 RAW_SINGLES="/home/chris/htest/data/raw/singles"
@@ -26,14 +27,44 @@ for sfc_file in "$RAW_SINGLES"/era5_sfc_an_????_??.grib; do
     base=$(basename "$sfc_file" .grib)
     out_file="${MERGED_SINGLES}/${base}_z.grib"
 
-    echo "Merging geopotential into ${base}..."
+    echo "Building timestamped geopotential merge for ${base}..."
 
-    grib_copy \
-        "$sfc_file" \
-        "$GEOPOTENTIAL" \
-        "$out_file"
+    tmpdir=$(mktemp -d /tmp/geopot_merge.XXXXXX)
+    z_all="${tmpdir}/z_all.grib"
 
-    echo "  Done: $(basename "$out_file")"
+    # Get one timestamp per 6-hourly period using 2m temperature as the clock.
+    grib_get -w shortName=2t -p dataDate,dataTime "$sfc_file" |
+    while read -r date time; do
+        [ -z "${date:-}" ] && continue
+
+        z_one="${tmpdir}/z_${date}_${time}.grib"
+
+        # Clone the static geopotential field to this timestamp.
+        grib_set \
+            -s dataDate="${date}",dataTime="${time}" \
+            "$GEOPOTENTIAL" \
+            "$z_one"
+
+        cat "$z_one" >> "$z_all"
+    done
+
+    n_time=$(grib_get -w shortName=2t -p dataDate,dataTime "$sfc_file" | wc -l)
+    n_z=$(grib_count "$z_all")
+
+    if [ "$n_time" -ne "$n_z" ]; then
+        echo "ERROR: expected $n_time timestamped z records, got $n_z"
+        rm -rf "$tmpdir"
+        exit 1
+    fi
+
+    rm -f "$out_file"
+
+    # Merge original monthly surface fields plus timestamped geopotential.
+    grib_copy "$sfc_file" "$z_all" "$out_file"
+
+    echo "  Done: $(basename "$out_file") with $n_z timestamped z records"
+
+    rm -rf "$tmpdir"
 done
 
-echo "Geopotential merge complete."
+echo "Geopotential timestamp merge complete."
