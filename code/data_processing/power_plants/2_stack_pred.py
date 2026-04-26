@@ -61,7 +61,7 @@ obs["ln_capacity"] = np.log(obs[COL_CAPACITY])
 X = sm.add_constant(obs["ln_capacity"])
 y = obs["ln_H"]
 
-result = sm.OLS(y, X).fit()
+result = sm.OLS(y, X).fit(cov_type='HC3')
 log.info("\n%s", result.summary())
 
 alpha_hat = result.params["const"]
