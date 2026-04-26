@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cd /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/code/era5/
+cd /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/code/data_processing/era5/
 
 echo "Merging Geopotential"
 ./2_merge_geopt.sh

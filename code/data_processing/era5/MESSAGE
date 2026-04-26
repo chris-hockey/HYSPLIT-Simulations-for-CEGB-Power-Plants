@@ -1,0 +1,10 @@
+ Simulation Date (CCYYMMDD): 20260426
+ Simulation Time (HHMMSS.S): 114250.823
+ NOTICE metini: MODEL_ID not AWRF in data (kg,kt)           1           1
+ Setting DREC(KG,KT)%WVERT=.FALSE. to use default vertical interpolation!
+ WARNING metini: FLUXES not found in data (kg,kt)           1           1
+ Setting KBLS=2 to use the wind/temp profiles!
+ 
+   KG   KT DATA  SIZE   NX   NY
+    1    1 ERA5  27.8   81   57
+ 
