@@ -23,7 +23,7 @@ from matplotlib.colors import LogNorm
 # ==============================================================================
 # Inputs
 PLANT_ID = "mdemd01"
-YEAR_MAJ = 1973
+YEAR_MAJ = 1974
 
 BASE_DIR = Path(
     "/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants"
