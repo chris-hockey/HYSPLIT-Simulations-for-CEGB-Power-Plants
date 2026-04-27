@@ -1,3 +1,3 @@
-from .plant import Plant, PlantYear
+from .plant import PlantYear
 from .run import HYSPLITRun
 from .kernel import AnnualKernel

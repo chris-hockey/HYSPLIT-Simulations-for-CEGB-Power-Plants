@@ -1,14 +1,14 @@
 """
-One HYSPLIT concentration simulation per plant financial year (1 April t - 31
-March t+1).
+One HYSPLIT concentration simulation per plant financial year (1 April t -
+31 March t+1).
 
-Each HYSPLITRun emits continuously at unit rate from 00Z 1 April of 'year_maj'
-to 00Z of 1 April of 'year_maj' + 1, then tracks particle for 'TAIL_HRS" more
-hours so the final corhort (particles released towards the end of the year) can
-clear the domain.
+Each `HYSPLITRun` emits continuously at unit rate from 00Z 1 April of
+`plant_year.year_maj` to 00Z 1 April `plant_year.year_maj + 1`, then
+tracks particles for `TAIL_HRS` more hours so the final cohort can clear
+the domain.
 
-Output sampled every 'SAMPLE_HRS' (24 hrs), overall producing 1 NetCDF file
-containing ~365 daily-mean concentrations.
+Output is sampled every `SAMPLE_HRS` (24h), producing one NetCDF file
+with ~365 daily-mean concentrations.
 """
 from __future__ import annotations
 import subprocess
@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .plant import Plant
+from .plant import PlantYear
 from .paths import (
     HYCS_STD,
     CON2CDF4,
@@ -41,7 +41,7 @@ def _arl_filename(year: int, month: int) -> str:
 
 
 def _fy_bounds(year_maj: int) -> tuple[datetime, datetime]:
-    """Financial year as 1 Apr year_maj 00Z, 1 Apr year_maj+1 00Z"""
+    """Financial year as 1 Apr year_maj 00Z, 1 Apr year_maj+1 00Z."""
     return datetime(year_maj, 4, 1), datetime(year_maj + 1, 4, 1)
 
 
@@ -52,7 +52,7 @@ def _fy_emit_hours(year_maj: int) -> int:
 
 
 def _months_covering(start: datetime, hours: int) -> list[tuple[int, int]]:
-    """(year, month) pairs for each calendar month touched by [start, start+hours]"""
+    """(year, month) pairs for each calendar month touched by [start, start+hours]."""
     end = start + timedelta(hours=hours)
     months: list[tuple[int, int]] = []
     cur = start.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -68,14 +68,15 @@ def _months_covering(start: datetime, hours: int) -> list[tuple[int, int]]:
 @dataclass
 class HYSPLITRun:
     """
-    One HYSPLIT concentration simulation covering a full Apr-Mar financial year.
+    One HYSPLIT concentration simulation covering a full Apr-Mar financial
+    year.
 
-    Emits continuously at unit rate from 00Z on 1 April `year_maj` through
-    00Z on 1 April `year_maj + 1`, then tracks TAIL_HRS more hours.
-    Produces one cdump file with ~365 daily-mean concentration records.
+    Emits continuously at unit rate from 00Z on 1 April
+    `plant_year.year_maj` through 00Z on 1 April `plant_year.year_maj + 1`,
+    then tracks `TAIL_HRS` more hours. Produces one cdump file with ~365
+    daily-mean concentration records.
     """
-    plant:      Plant
-    year_maj:   int
+    plant_year: PlantYear
     cdump_path: Path = field(init=False, repr=False)
     nc_path:    Path = field(init=False, repr=False)
     run_dir:    Path = field(init=False, repr=False)
@@ -83,11 +84,12 @@ class HYSPLITRun:
     run_hrs:    int = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        self.emit_hrs = _fy_emit_hours(self.year_maj)
+        py = self.plant_year
+        self.emit_hrs = _fy_emit_hours(py.year_maj)
         self.run_hrs = self.emit_hrs + TAIL_HRS
 
-        self.run_dir = RUNS_DIR / f"{self.plant.plant_id}_{self.year_maj}"
-        tag = f"cdump_{self.plant.plant_id}_{self.year_maj}"
+        self.run_dir = RUNS_DIR / f"{py.plant_id}_{py.year_maj}"
+        tag = f"cdump_{py.plant_id}_{py.year_maj}"
         self.cdump_path = self.run_dir / tag
         self.nc_path = self.cdump_path.with_suffix(".nc")
 
@@ -117,7 +119,8 @@ class HYSPLITRun:
         )
 
     def _write_control(self) -> None:
-        start, _ = _fy_bounds(self.year_maj)
+        py = self.plant_year
+        start, _ = _fy_bounds(py.year_maj)
         yy, mm, dd, hh = start.year % 100, start.month, start.day, start.hour
 
         months = _months_covering(start, self.run_hrs)
@@ -130,7 +133,7 @@ class HYSPLITRun:
         # format still requires one (dir, filename) pair per file.
         if n_files > _MAX_FILES_PER_GRID:
             raise RuntimeError(
-                f"{n_files} ARL files needed for FY{self.year_maj}, "
+                f"{n_files} ARL files needed for FY{py.year_maj}, "
                 f"exceeds HYSPLIT compilation limit of "
                 f"{_MAX_FILES_PER_GRID} per grid."
             )
@@ -143,7 +146,7 @@ class HYSPLITRun:
         lines = [
             f"{yy:02d} {mm:02d} {dd:02d} {hh:02d}",
             "1",
-            f"{self.plant.lat} {self.plant.lon} {self.plant.stack_ht_m}",
+            f"{py.lat} {py.lon} {py.stack_ht_m}",
             f"{self.run_hrs}",
             "0",
             "10000.0",
@@ -165,8 +168,7 @@ class HYSPLITRun:
             f"{OUTPUT_HT_M}",
             "00 00 00 00 00",                           # sample start = sim start
             "00 00 00 00 00",                           # sample stop  = sim end
-            # daily averages, daily output
-            f"00 {SAMPLE_HRS:02d} 00",
+            f"00 {SAMPLE_HRS:02d} 00",                  # daily averages
             "1",
             "0.0 0.0 0.0",
             "0.0 0.0 0.0 0.0 0.0",
@@ -219,5 +221,6 @@ class HYSPLITRun:
 
     @property
     def tag(self) -> str:
-        yy_next = (self.year_maj + 1) % 100
-        return f"{self.plant.plant_id} FY{self.year_maj}/{yy_next:02d}"
+        py = self.plant_year
+        yy_next = (py.year_maj + 1) % 100
+        return f"{py.plant_id} FY{py.year_maj}/{yy_next:02d}"

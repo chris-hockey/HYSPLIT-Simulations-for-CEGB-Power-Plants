@@ -1,5 +1,5 @@
  Simulation Date (CCYYMMDD): 20260426
- Simulation Time (HHMMSS.S): 114250.823
+ Simulation Time (HHMMSS.S): 164049.720
  NOTICE metini: MODEL_ID not AWRF in data (kg,kt)           1           1
  Setting DREC(KG,KT)%WVERT=.FALSE. to use default vertical interpolation!
  WARNING metini: FLUXES not found in data (kg,kt)           1           1
