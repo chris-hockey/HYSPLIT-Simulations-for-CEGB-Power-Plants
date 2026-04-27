@@ -39,7 +39,7 @@ from hysplit.paths import PANEL_PATH, RUN_LOG_PATH
 # ----------------------------------------------------------------------
 
 MAX_WORKERS = 10
-N_JOBS = 10         # dress rehearsal: first N jobs. None for full run.
+N_JOBS = None         # dress rehearsal: first N jobs. None for full run.
 
 LOG_FIELDS = [
     "timestamp",
