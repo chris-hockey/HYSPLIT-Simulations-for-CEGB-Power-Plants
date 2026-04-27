@@ -20,7 +20,7 @@ ARL_DIR = PROJECT_ROOT / "data/final/arl"
 PANEL_PATH = PROJECT_ROOT / "data/final/cegb_panel_with_stacks.csv"
 
 # simulation outputs
-SIM_ROOT = PROJECT_ROOT / "data/final/sim_test"
+SIM_ROOT = PROJECT_ROOT / "data/final/simulation_output"
 RUNS_DIR = SIM_ROOT / "runs"
 ANNUAL_DIR = SIM_ROOT / "kernels/annual"
 
