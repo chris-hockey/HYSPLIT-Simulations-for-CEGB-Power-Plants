@@ -23,14 +23,14 @@ from matplotlib.colors import LogNorm
 # ==============================================================================
 # Inputs
 PLANT_ID = "mdemd01"
-YEAR_MAJ = 1974
+YEAR_MAJ = 1973
 
 BASE_DIR = Path(
     "/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants"
 )
 PANEL_PATH = BASE_DIR / "data" / "final" / "cegb_panel_with_stacks.csv"
 KERNEL_PATH = (
-    BASE_DIR / "data" / "final" / "sim_test" / "kernels" / "annual"
+    BASE_DIR / "data" / "final" / "simulation_output" / "kernels" / "annual"
     / f"kernel_{PLANT_ID}_{YEAR_MAJ}.nc"
 )
 
@@ -114,7 +114,7 @@ ax1.bar(
     width=width, bottom=0.0, edgecolor="white", linewidth=0.3,
     align="center",
 )
-ax1.set_title(f"{name}  —  kernel by bearing, FY {fy}", pad=20)
+ax1.set_title(f"{name}  -  kernel by bearing, FY {fy}", pad=20)
 ax1.set_rlabel_position(135)
 
 # --- (2) Polar heatmap ---
@@ -130,7 +130,7 @@ pm = ax2.pcolormesh(
     norm=LogNorm(vmin=H_masked.min(), vmax=H_masked.max()),
     cmap="YlOrRd", shading="auto",
 )
-ax2.set_title(f"{name}  —  kernel by bearing x distance, FY {fy}", pad=20)
+ax2.set_title(f"{name}  -  kernel by bearing x distance, FY {fy}", pad=20)
 ax2.set_rscale("symlog", linthresh=10)
 plt.colorbar(pm, ax=ax2, label="kernel sum in bin", shrink=0.7)
 
