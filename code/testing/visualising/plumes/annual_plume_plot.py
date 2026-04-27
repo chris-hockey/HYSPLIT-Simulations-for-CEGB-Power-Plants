@@ -21,7 +21,7 @@ from matplotlib.colors import LogNorm
 # ==============================================================================
 # Inputs
 PLANT_ID = "mdemd01"
-YEAR_MAJ = 1974
+YEAR_MAJ = 1973
 
 BASE_DIR = Path(
     "/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants"
@@ -29,7 +29,7 @@ BASE_DIR = Path(
 
 PANEL_PATH = BASE_DIR / "data" / "final" / "cegb_panel_with_stacks.csv"
 KERNEL_PATH = (
-    BASE_DIR / "data" / "final" / "sim_test" / "kernels" / "annual"
+    BASE_DIR / "data" / "final" / "simulation_output" / "kernels" / "annual"
     / f"kernel_{PLANT_ID}_{YEAR_MAJ}.nc"
 )
 
@@ -127,7 +127,7 @@ ax_sc.set_xscale("log")
 ax_sc.set_yscale("log")
 ax_sc.set_xlabel("Distance from source (km)")
 ax_sc.set_ylabel("Annual kernel")
-ax_sc.set_title(f"{plant_name}  —  kernel vs distance, FY {fy_label}")
+ax_sc.set_title(f"{plant_name}  -  kernel vs distance, FY {fy_label}")
 # Reference slopes anchored to the first finite bin
 d_ref = np.logspace(np.log10(d.min()), np.log10(d.max()), 100)
 idx_anchor = np.where(~np.isnan(bin_c))[0][0]
