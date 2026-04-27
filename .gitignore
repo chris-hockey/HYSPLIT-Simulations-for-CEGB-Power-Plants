@@ -9,4 +9,4 @@
 /papers/
 *.png
 /plots
-/code/simulation/__pycache__
+/code/simulation/__pycache__/
