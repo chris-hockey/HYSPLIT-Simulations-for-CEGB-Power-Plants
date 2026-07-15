@@ -23,6 +23,7 @@ PANEL_PATH = PROJECT_ROOT / "data/final/cegb_panel_with_stacks.csv"
 SIM_ROOT = PROJECT_ROOT / "data/final/simulation_output"
 RUNS_DIR = SIM_ROOT / "runs"
 ANNUAL_DIR = SIM_ROOT / "kernels/annual"
+MONTHLY_DIR = SIM_ROOT / "kernels/monthly"
 
 # grid
 GRID_CENTRE = (53.0, -2.0)  # lat, lon
