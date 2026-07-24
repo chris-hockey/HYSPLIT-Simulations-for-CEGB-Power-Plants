@@ -38,7 +38,7 @@ from hysplit.paths import PANEL_PATH, RUN_LOG_PATH
 # config
 # ----------------------------------------------------------------------
 
-MAX_WORKERS = 10
+MAX_WORKERS = 6
 N_JOBS = None         # dress rehearsal: first N jobs. None for full run.
 
 LOG_FIELDS = [
