@@ -102,7 +102,7 @@ class HYSPLITRun:
             "INITD = 0,\n"
             "KHMAX = 9999,\n"
             "DELT = 0.0,\n"
-            "KDEF = 1,\n"
+            "KDEF = 0,\n"
             "/\n"
         )
         bdyfiles = (
