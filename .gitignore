@@ -10,3 +10,4 @@
 *.png
 /plots
 code/simulation/hysplit/__pycache__
+/run1/
