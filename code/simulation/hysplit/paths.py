@@ -21,6 +21,7 @@ PANEL_PATH = PROJECT_ROOT / "data/final/cegb_panel_with_stacks.csv"
 
 # simulation outputs
 SIM_ROOT = PROJECT_ROOT / "data/final/simulation_output"
+ENSEMBLE_ROOT = SIM_ROOT / "ensemble_1981"
 RUNS_DIR = SIM_ROOT / "runs"
 ANNUAL_DIR = SIM_ROOT / "kernels/annual"
 MONTHLY_DIR = SIM_ROOT / "kernels/monthly"
@@ -35,12 +36,7 @@ OUTPUT_HT_M = 100           # AGL metres
 TAIL_HRS = 72        # hours after emission stop for particles to clear
 SAMPLE_HRS = 24        # output averaging interval (daily means)
 NUMPAR = 500_000   # total particles across a full FY (~57/hr release)
-MAXPAR = 15_000    # cap on particles on grid at any instant
-
-# fuel category coefficients for HEAT ensemble runs
-K_COAL = (0, 0.03, 0.06, 0.09, 0.12)
-K_OIL = (0, 0.039, 0.078, 0.117, 0.156, 0.195, 0.234)
-K_GT = (0, 0.5, 1, 1.5, 2, 2.5, 3)
+MAXPAR = 100_000    # cap on particles on grid at any instant
 
 # dropbox directory for remotely checking errors
 DROPBOX_DIR = Path(
