@@ -10,6 +10,7 @@ year-specific fuel input. Constructed from the CEGB panel via
 for the financial year, April `year_maj` through March `year_maj + 1`.
 """
 from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -26,13 +27,15 @@ class PlantYear:
     Time-invariant fields (plant_id, plant_name, lat, lon, stack_ht_m) and
     the year-specific fuel input are read together from a single panel row.
     """
-    plant_id:       str
-    plant_name:     str
-    lat:            float
-    lon:            float
-    stack_ht_m:     float
-    year_maj:       int
+    plant_id: str
+    plant_name: str
+    lat: float
+    lon: float
+    stack_ht_m: float
+    year_maj: int
     fuel_input_gwh: float
+    capacity_mw: float
+    fuel_cat: str
 
     @classmethod
     def from_panel(
@@ -69,6 +72,8 @@ class PlantYear:
             stack_ht_m=float(row["max_stack_height_m"]),
             year_maj=int(year_maj),
             fuel_input_gwh=float(row["fuel_input_gwh"]),
+            capacity_mw=float(row["dec_gross_cap_mw_gen"]),
+            fuel_cat=str(row["fuel_cat"]),
         )
 
     def calendar_months(self) -> list[tuple[int, int]]:
