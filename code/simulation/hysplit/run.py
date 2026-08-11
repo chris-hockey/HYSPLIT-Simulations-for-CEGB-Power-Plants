@@ -99,6 +99,7 @@ class HYSPLITRun:
             "&SETUP\n"
             f"NUMPAR = {NUMPAR},\n"
             f"MAXPAR = {MAXPAR},\n"
+            "PLRISE = 1,\n"
             "INITD = 0,\n"
             "KHMAX = 9999,\n"
             "DELT = 0.0,\n"
