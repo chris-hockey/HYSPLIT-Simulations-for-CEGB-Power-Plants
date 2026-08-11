@@ -18,6 +18,8 @@ import pandas as pd
 
 from .paths import PANEL_PATH
 
+# ==============================================================================
+
 
 @dataclass
 class PlantYear:
@@ -34,8 +36,6 @@ class PlantYear:
     stack_ht_m: float
     year_maj: int
     fuel_input_gwh: float
-    capacity_mw: float
-    fuel_cat: str
 
     @classmethod
     def from_panel(
@@ -72,8 +72,6 @@ class PlantYear:
             stack_ht_m=float(row["max_stack_height_m"]),
             year_maj=int(year_maj),
             fuel_input_gwh=float(row["fuel_input_gwh"]),
-            capacity_mw=float(row["dec_gross_cap_mw_gen"]),
-            fuel_cat=str(row["fuel_cat"]),
         )
 
     def calendar_months(self) -> list[tuple[int, int]]:
