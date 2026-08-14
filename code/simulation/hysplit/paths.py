@@ -23,6 +23,7 @@ PANEL_PATH = PROJECT_ROOT / "data/final/cegb_panel_with_stacks.csv"
 SIM_ROOT = PROJECT_ROOT / "data/final/simulation_output"
 ENSEMBLE_ROOT = SIM_ROOT / "ensemble_1981"
 RUNS_DIR = SIM_ROOT / "runs"
+ENSEMBLE_RUNS_DIR = ENSEMBLE_ROOT / "runs"
 ANNUAL_DIR = SIM_ROOT / "kernels/annual"
 MONTHLY_DIR = SIM_ROOT / "kernels/monthly"
 
