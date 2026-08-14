@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 import re
 import sys
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 import numpy as np
@@ -34,6 +35,7 @@ OUT_DIR = Path(PROJECT_ROOT / "data" / "final" / "pollution_stations")
 
 YEAR_MAJ = 1981
 SAMPLE_HRS = 24
+MAX_WORKERS = 6          # process pool size; 1 = serial
 FUELS = ("coal", "oil", "gt")
 
 # ==============================================================================
@@ -130,6 +132,46 @@ def parse_cdump_name(cdump_nc: Path) -> tuple[str, int, str]:
         raise ValueError(f"unrecognised cdump name: {cdump_nc.name}")
     return m["plant"], int(m["year"]), m["k"]
 
+
+# ==============================================================================
+# Worker: sample one cdump at the stations and return its daily contribution
+#
+# The cell map, FY axis and run parameters are process-global (set once per
+# worker by _init_worker) so they are not re-pickled for every job.
+# ==============================================================================
+_G: dict = {}
+
+
+def _init_worker(lat_idx, lon_idx, in_domain, year_maj, sample_hrs, fy_start, n_days):
+    _G.update(
+        lat_idx=lat_idx, lon_idx=lon_idx, in_domain=in_domain,
+        year_maj=year_maj, sample_hrs=sample_hrs,
+        fy_start=fy_start, n_days=n_days, n_st=len(lat_idx),
+    )
+
+
+def _sample_one(job: tuple[str, str, str, float]):
+    """(cdump_path, member, fuel, fuel_input) -> (member, fuel, contrib[float32])
+    where contrib is (n_days, n_st) = f_input * concentration at each station."""
+    cdump, member, fuel, f_input = job
+    try:
+        da = load_daily_grid(cdump, _G["year_maj"], _G["sample_hrs"])
+        samp = da.values[:, _G["lat_idx"],
+                         _G["lon_idx"]]        # (days, station)
+        samp = np.where(_G["in_domain"][None, :], samp, 0.0)
+        # drop negatives
+        np.clip(samp, 0.0, None, out=samp)
+
+        day_vals = da["date"].values.astype("datetime64[D]")
+        rows = (day_vals - _G["fy_start"]
+                ).astype("timedelta64[D]").astype(np.int64)
+
+        contrib = np.zeros((_G["n_days"], _G["n_st"]), dtype=np.float32)
+        contrib[rows] = (samp * f_input).astype(np.float32)
+        return member, fuel, contrib
+    except Exception as e:                                        # noqa: BLE001
+        return "ERR", Path(cdump).name, f"{type(e).__name__}: {e}"
+
 # ==============================================================================
 # Build the panels
 # ==============================================================================
@@ -140,12 +182,19 @@ def build_station_exposure(
     panel_path: Path = PANEL_PATH,
     stations_path: Path = STATIONS_PATH,
     year_maj: int = YEAR_MAJ,
+    max_workers: int = MAX_WORKERS,
 ) -> dict[str, pd.DataFrame]:
     """
     Stream every ensemble cdump for `year_maj` into daily/monthly/annual
     station-exposure panels. Returns {"daily", "monthly", "annual"} DataFrames.
+
+    Sampling each cdump is independent work, so files are dispatched to a
+    ProcessPoolExecutor; the station->cell map is built once and shared with
+    workers via an initializer, and the parent sums the returned contributions.
+    Numerically identical to a serial run (summation is associative); set
+    max_workers=1 to force serial.
     """
-    # --- plant lookup: (plant_id) -> fuel_cat, fuel_input_gwh, for this FY -----
+    # plant lookup: (plant_id) -> fuel_cat, fuel_input_gwh, for this FY
     panel = pd.read_csv(panel_path)
     lut = (
         panel[panel["year_maj"] == year_maj]
@@ -153,7 +202,7 @@ def build_station_exposure(
         .set_index("plant_id")[["fuel_cat", "fuel_input_gwh"]]
     )
 
-    # --- stations: unique (station_id, lon, lat) ------------------------------
+    # stations: unique (station_id, lon, lat)
     st = (
         pd.read_csv(stations_path)[["station_id", "lon", "lat"]]
         .drop_duplicates("station_id")
@@ -164,13 +213,13 @@ def build_station_exposure(
     station_ids = st["station_id"].to_numpy()
     n_st = len(station_ids)
 
-    # --- canonical financial-year day axis ------------------------------------
+    # canonical financial-year day axis
     fy_dates = pd.date_range(
         f"{year_maj}-04-01", f"{year_maj + 1}-03-31", freq="D")
     n_days = len(fy_dates)
-    date_pos = {d: i for i, d in enumerate(fy_dates)}
+    fy_start = np.datetime64(f"{year_maj}-04-01")
 
-    # --- cell map (built once from the first cdump's grid) --------------------
+    # cell map (built once from the first cdump's grid)
     cdumps = sorted(ENSEMBLE_RUNS_DIR.glob(
         f"*_{year_maj}_k*/cdump_*_{year_maj}_k*.nc"))
     if not cdumps:
@@ -185,9 +234,9 @@ def build_station_exposure(
     log.info("%d stations, %d/%d inside domain",
              n_st, int(in_domain.sum()), n_st)
 
-    # --- accumulate: (member_tag, fuel) -> (n_days, n_st) ---------------------
-    acc: dict[tuple[str, str], np.ndarray] = {}
-    n_ok = n_skip = 0
+    # job list: parse name + panel lookup (no file reads yet)
+    jobs: list[tuple[str, str, str, float]] = []
+    n_skip = 0
     for cdump in cdumps:
         plant, yr, mtag = parse_cdump_name(cdump)
         if plant not in lut.index:
@@ -196,36 +245,45 @@ def build_station_exposure(
             n_skip += 1
             continue
         fuel = str(lut.at[plant, "fuel_cat"])
-        f_input = float(lut.at[plant, "fuel_input_gwh"])
         if fuel not in FUELS:
             log.warning("plant %s fuel_cat=%r not in %s; skipping",
                         plant, fuel, FUELS)
             n_skip += 1
             continue
+        jobs.append((str(cdump), mtag, fuel, float(
+            lut.at[plant, "fuel_input_gwh"])))
 
-        da = load_daily_grid(cdump, yr)
-        samp = da.values[:, lat_idx, lon_idx]           # (days, station)
-        samp = np.where(in_domain[None, :], samp, 0.0)
-        # drop con2cdf4 negatives
-        np.clip(samp, 0.0, None, out=samp)
+    log.info("dispatching %d cdumps across %d workers (%d skipped)",
+             len(jobs), max_workers, n_skip)
 
-        # place this run's days onto the canonical FY axis (0 where absent)
-        rows = np.array([date_pos[d]
-                        for d in pd.DatetimeIndex(da["date"].values)])
-        contrib = np.zeros((n_days, n_st))
-        contrib[rows] = samp * f_input                  # E_sd = f_j * c_jsd
+    # dispatch + reduce
+    acc: dict[tuple[str, str], np.ndarray] = {}
+    n_ok = n_fail = 0
+    init_args = (lat_idx, lon_idx, in_domain, year_maj,
+                 SAMPLE_HRS, fy_start, n_days)
+    with ProcessPoolExecutor(
+        max_workers=max_workers, initializer=_init_worker, initargs=init_args
+    ) as ex:
+        futs = [ex.submit(_sample_one, job) for job in jobs]
+        for fut in as_completed(futs):
+            member, fuel, payload = fut.result()
+            if member == "ERR":
+                n_fail += 1
+                # fuel=name, payload=msg
+                log.warning("FAIL %s: %s", fuel, payload)
+                continue
+            key = (member, fuel)
+            if key not in acc:
+                # float64 accumulator
+                acc[key] = np.zeros((n_days, n_st))
+            acc[key] += payload
+            n_ok += 1
+            if n_ok % 50 == 0:
+                log.info("  %d/%d cdumps summed", n_ok, len(jobs))
 
-        key = (mtag, fuel)
-        if key not in acc:
-            acc[key] = np.zeros((n_days, n_st))
-        acc[key] += contrib
-        n_ok += 1
-        if n_ok % 50 == 0:
-            log.info("  %d cdumps summed", n_ok)
+    log.info("summed %d cdumps (%d failed, %d skipped)", n_ok, n_fail, n_skip)
 
-    log.info("summed %d cdumps (%d skipped)", n_ok, n_skip)
-
-    # --- assemble the wide daily panel (all 3x7 columns, 0 where a fuel is absent)
+    # assemble the wide daily panel (all 3x7 columns, 0 where a fuel is absent)
     members = sorted({m for m, _ in acc}, key=lambda t: int(t[1:]))
     e_cols = [f"e_{fuel}_{m}" for m in members for fuel in FUELS]
     daily = pd.DataFrame(
@@ -238,7 +296,7 @@ def build_station_exposure(
         # station-major
         daily[col] = (arr.T.reshape(-1) if arr is not None else 0.0)
 
-    # --- monthly and annual are means of the daily panel ----------------------
+    # monthly and annual are means of the daily panel
     daily["ym"] = pd.DatetimeIndex(
         daily["date"]).year * 100 + pd.DatetimeIndex(daily["date"]).month
     monthly = daily.groupby(["station_id", "ym"], as_index=False)[
