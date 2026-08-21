@@ -27,8 +27,10 @@ COL_STACK = "max_stack_height_m"
 COL_CAPACITY = "max_cap_mw"
 COL_PLANT_ID = "plant_id"
 
-# ------------------------------------------------------------------------------
+
+# ==============================================================================
 # Load and deduplicate to one row per plant
+# ==============================================================================
 
 cfpp = pd.read_csv(INT_DIR / "clean_cegb.csv")
 stack_raw = pd.read_csv(RAW_DIR / "plant_stack_heights.csv")
@@ -51,8 +53,10 @@ assert n_with_stack >= 3, "Too few observed stack heights to estimate."
 assert plants.loc[plants[COL_STACK].notna(), COL_CAPACITY].gt(0).all(), \
     "Non-positive capacity in observed sample."
 
-# ------------------------------------------------------------------------------
+
+# ==============================================================================
 # OLS: ln(H) = alpha + beta * ln(capacity)
+# ==============================================================================
 
 obs = plants.dropna(subset=[COL_STACK]).copy()
 obs["ln_H"] = np.log(obs[COL_STACK])
@@ -68,8 +72,10 @@ alpha_hat = result.params["const"]
 beta_hat = result.params["ln_capacity"]
 log.info("z = exp(alpha): %.4f  |  beta: %.4f", np.exp(alpha_hat), beta_hat)
 
-# ------------------------------------------------------------------------------
+
+# ==============================================================================
 # LOO cross-validation on observed subsample
+# ==============================================================================
 
 n = len(obs)
 loo_errors = np.empty(n)
@@ -85,8 +91,10 @@ loo_mape = np.mean(np.abs(np.expm1(loo_errors))) * 100
 log.info("LOO-CV  |  RMSE (log): %.4f  |  MAPE (level): %.1f%%",
          loo_rmse, loo_mape)
 
-# ------------------------------------------------------------------------------
+
+# ==============================================================================
 # Impute
+# ==============================================================================
 
 missing_mask = plants[COL_STACK].isna()
 plants["stack_height_imputed"] = missing_mask
@@ -98,7 +106,9 @@ plants.loc[missing_mask, COL_STACK] = (
 assert plants[COL_STACK].notna().all()
 assert plants[COL_STACK].gt(0).all()
 
-# ------------------------------------------------------------------------------
+
+# ==============================================================================
+
 cfpp = cfpp.merge(
     plants[[COL_PLANT_ID, COL_STACK, "stack_height_imputed"]],
     on=COL_PLANT_ID,

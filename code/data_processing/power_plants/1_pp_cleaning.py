@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 # ==============================================================================
-# paths and constants
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
 OUT_DIR = PROJECT_ROOT / "data" / "intermediate"
@@ -43,12 +43,14 @@ K_BY_FUEL = {
 
 
 # ==============================================================================
+
 cfpp = pd.read_csv(RAW_DIR / "cegb_panel.csv")
 cfpp["fuel_cat"] = cfpp["fuel_cat"].astype(str)
 
 
 # ==============================================================================
 # resolve fuel categories
+# ==============================================================================
 
 # treat dual-fired plants as oil in the strike year (1984/85) and coal in all
 # other years.
@@ -69,6 +71,7 @@ if n_coal:
 
 # ==============================================================================
 # construct plant-year variables
+# ==============================================================================
 
 # zero output where efficiency is missing and clamp negative output to zero.
 missing_efficiency = (
@@ -101,6 +104,7 @@ cfpp["fuel_input_gwh"] = (
 
 # ==============================================================================
 # construct HEAT ensemble variables
+# ==============================================================================
 
 # sensible heat (W) per plant-year:
 # HEAT_k = k_fuel × capacity_MW × 1e6.
@@ -115,6 +119,7 @@ for m in range(len(K_COAL)):
 
 # ==============================================================================
 # restrict sample to year_maj 1973 onwards and only coal (and df), oil, gt
+# ==============================================================================
 
 cfpp_trimmed = (
     cfpp[
