@@ -1,6 +1,10 @@
 """
 Impute stack heights via log-log OLS: ln(H) = alpha + beta * ln(capacity)
 Validates via LOO cross-validation, imputes missing, writes to final.
+
+Author: Christopher Hockey
+chrishockey2@gmail.com
+August 2026
 """
 
 import logging
@@ -18,8 +22,14 @@ logging.Formatter.converter = time.localtime
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
+
 INT_DIR = PROJECT_ROOT / "data" / "intermediate"
+
+TABLE_DIR = PROJECT_ROOT / "tables"
+TABLE_DIR.mkdir(exist_ok=True, parents=True)
+
 OUT_DIR = PROJECT_ROOT / "data" / "final"
 OUT_DIR.mkdir(exist_ok=True, parents=True)
 
@@ -29,7 +39,7 @@ COL_PLANT_ID = "plant_id"
 
 
 # ==============================================================================
-# Load and deduplicate to one row per plant
+# load and deduplicate to one row per plant
 # ==============================================================================
 
 cfpp = pd.read_csv(INT_DIR / "clean_cegb.csv")
@@ -93,7 +103,7 @@ log.info("LOO-CV  |  RMSE (log): %.4f  |  MAPE (level): %.1f%%",
 
 
 # ==============================================================================
-# Impute
+# impute
 # ==============================================================================
 
 missing_mask = plants[COL_STACK].isna()
@@ -122,3 +132,67 @@ panel_path = OUT_DIR / "cegb_panel_with_stacks.csv"
 cfpp.to_csv(panel_path, index=False)
 log.info("Wrote panel with stack heights: %d rows, %d plants to %s",
          len(cfpp), cfpp[COL_PLANT_ID].nunique(), panel_path)
+
+
+# ==============================================================================
+# export regression table for LaTeX
+# ==============================================================================
+
+def stars(pvalue: float) -> str:
+    """Return conventional significance stars."""
+    if pvalue < 0.01:
+        return "***"
+    if pvalue < 0.05:
+        return "**"
+    if pvalue < 0.10:
+        return "*"
+    return ""
+
+
+beta_stars = stars(result.pvalues["ln_capacity"])
+alpha_stars = stars(result.pvalues["const"])
+
+table_tex = rf"""
+\begin{{tabular}}{{lc}}
+\toprule
+ & $\ln(h_i)$ \\
+\midrule
+$\ln(\mathrm{{capacity}}_i)$
+    & ${beta_hat:.3f}^{{{beta_stars}}}$ \\
+    & $({result.bse["ln_capacity"]:.3f})$ \\
+
+Constant ($\hat{{\alpha}}$)
+    & ${alpha_hat:.3f}^{{{alpha_stars}}}$ \\
+    & $({result.bse["const"]:.3f})$ \\
+
+\midrule
+Observations
+    & {int(result.nobs)} \\
+
+$R^2$
+    & {result.rsquared:.3f} \\
+
+Adj.\ $R^2$
+    & {result.rsquared_adj:.3f} \\
+
+$F$-statistic
+    & {result.fvalue:.1f} \\
+
+\midrule
+$\hat{{z}} = e^{{\hat{{\alpha}}}}$
+    & {np.exp(alpha_hat):.2f} \\
+
+LOO-CV RMSE (log)
+    & {loo_rmse:.3f} \\
+
+LOO-CV MAPE (levels)
+    & {loo_mape:.1f}\% \\
+
+\bottomrule
+\end{{tabular}}
+"""
+
+table_path = TABLE_DIR / "stack_height_ols.tex"
+table_path.write_text(table_tex.strip() + "\n")
+
+log.info("Wrote LaTeX table to %s", table_path)
