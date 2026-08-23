@@ -10,7 +10,7 @@ from pathlib import Path
 
 # project root
 PROJECT_ROOT = Path(
-    "/home/chris/Documents/hysplit_test/"
+    "/home/chris/Documents/cfpp_hysplit/"
     "HYSPLIT-Simulations-for-CEGB-Power-Plants"
 )
 
