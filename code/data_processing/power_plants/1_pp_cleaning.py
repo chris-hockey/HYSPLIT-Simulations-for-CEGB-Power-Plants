@@ -56,6 +56,21 @@ K_BY_FUEL = {
     "gt": K_GT,
 }
 
+# Ensemble member selected per fuel category from the FY1981/82 calibration
+# (`ensemble_assessment.py`), indexed to match the `heat_w_k{n}` columns.
+SELECTED_MEMBER = {
+    "coal": 2,
+    "oil": 5,
+    "gt": 6,
+}
+
+assert set(SELECTED_MEMBER) == set(FUELS), (
+    "A member must be selected for every fuel category."
+)
+assert all(1 <= m <= len(K_COAL) for m in SELECTED_MEMBER.values()), (
+    "Selected members must index into the k grids."
+)
+
 
 # ==============================================================================
 
@@ -129,6 +144,24 @@ for m in range(len(K_COAL)):
     )
     cfpp[f"heat_w_k{m + 1}"] = (
         coeff * cfpp["dec_gross_cap_mw_gen"] * 1e6
+    )
+
+
+# ==============================================================================
+# select the production HEAT value
+# ==============================================================================
+
+# `heat_w` is the sensible heat passed to HYSPLIT via EMITIMES in the
+# production runs: the calibration-selected member of each fuel's k grid.
+# taken from the ensemble columns rather than recomputed
+cfpp["heat_w"] = float("nan")
+
+for fuel, member in SELECTED_MEMBER.items():
+    mask = cfpp["fuel_cat"].eq(fuel)
+    cfpp.loc[mask, "heat_w"] = cfpp.loc[mask, f"heat_w_k{member}"]
+    log.info(
+        "Production heat for %s: k%d (k = %s)",
+        fuel, member, K_BY_FUEL[fuel][member - 1],
     )
 
 
