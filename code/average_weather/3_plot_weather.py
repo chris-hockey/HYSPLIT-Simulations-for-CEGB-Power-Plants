@@ -1,31 +1,45 @@
-import calendar
+"""
+Plot monthly weather in the calibration year against all other years in the
+study period, to assess meteorological representativeness.
+
+Takes the cropped NetCDF fields from 2_extract_weather.py, forms
+latitude-weighted spatial means over the domain (sums for precipitation),
+aggregates to months, and reorganises onto April-March financial years. Six
+variables are plotted, each showing `TARGET_YEAR` highlighted against the
+remaining years in grey.
+
+Output: weather_YYYY_YY_comparison.pdf in plots/ and the Overleaf technical
+appendix plot directory.
+
+Author: Christopher Hockey
+chrishockey2@gmail.com
+August 2026
+"""
+
 from pathlib import Path
 
-import pandas as pd
-from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import xarray as xr
+from matplotlib.axes import Axes
 
+# ==============================================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# =========================================================================W=====
 DATA_DIR = PROJECT_ROOT / "data" / "final" / "merged_weather"
-PLOT_DIR = PROJECT_ROOT / "plots" / "weather"
+PLOT_DIR = PROJECT_ROOT / "plots"
 PLOT_DIR.mkdir(parents=True, exist_ok=True)
+OVERLEAF_PLOT_DIR = Path(
+    "/home/chris/Royal Holloway Dropbox/Chris Hockey/Apps/Overleaf/"
+    "Coal Power and Infant Health/Technical Appendix/Plots"
+)
 
 TARGET_YEAR = 1981
 
-FIRST_YEAR = 1973
-LAST_YERA = 1988
 
-MONTH_LABELS = [
-    calendar.month_abbr[m]
-    for m in [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3,]
-]
-
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def monthly_spatial_mean(da: xr.DataArray) -> xr.DataArray:
@@ -66,7 +80,7 @@ def monthly_spatial_precip(da: xr.DataArray) -> xr.DataArray:
     return monthly
 
 
-def to_financial_year(da: xr.DataArray) -> xr.DataArray:
+def to_financial_year(da: xr.DataArray) -> pd.DataFrame:
     """
     Convert monthly data to April-March financial years used in the HYSPLIT
     simulations
@@ -152,8 +166,11 @@ precip = xr.open_dataset(DATA_DIR / "total_precip.nc", decode_timedelta=False,)
 pres = xr.open_dataset(DATA_DIR / "pressure_925_tuv.nc",
                        decode_timedelta=False,)
 
+
 # ==============================================================================
 # construct monthly variables
+# ==============================================================================
+
 variables = {
     "2 m temperature": {
         "data": monthly_spatial_mean(instant["t2m"] - 273.15),
@@ -194,6 +211,8 @@ variables = {
 
 # ==============================================================================
 # plot
+# ==============================================================================
+
 fig, axes = plt.subplots(
     3,
     2,
@@ -225,11 +244,22 @@ fig.tight_layout(rect=(0, 0.05, 1, 1))
 
 plt.show()
 
+
 # ==============================================================================
+
 out = PLOT_DIR / \
     f"weather_{TARGET_YEAR}_{(TARGET_YEAR + 1) % 100:02d}_comparison.pdf"
 
 fig.savefig(
     out,
+    bbox_inches="tight",
+)
+
+
+out_overleaf = OVERLEAF_PLOT_DIR / \
+    f"weather_{TARGET_YEAR}_{(TARGET_YEAR + 1) % 100:02d}_comparison.pdf"
+
+fig.savefig(
+    out_overleaf,
     bbox_inches="tight",
 )

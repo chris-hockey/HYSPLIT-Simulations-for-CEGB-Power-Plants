@@ -1,25 +1,50 @@
 """
-One HYSPLIT concentration simulation per plant financial year (1 April t -
-31 March t+1).
+`HYSPLITRun` is a class of object that represents one HYSPLIT concentration
+simulation: one plant emitting over one financial year, 00Z 1 April `year_maj`
+to 00Z 1 April `year_maj + 1`.
 
-Each `HYSPLITRun` emits continuously at unit rate from 00Z 1 April of
-`plant_year.year_maj` to 00Z 1 April `plant_year.year_maj + 1`, then
-tracks particles for `TAIL_HRS` more hours so the final cohort can clear
-the domain.
+`HYSPLITRun` is constructed from a `PlantYear` plus an optional sensible heat
+`heat_w` (watts) and an optional `member_tag` (e.g. "k4") that suffixes the
+run directory and output filenames to keep ensemble members apart. From these,
+it derives the run directory, the cdump and NetCDF output paths, the emission
+duration `emit_hrs` (8760hr, or 8784hr when the FY spans a leap February) and
+the total duration `run_hrs = emit_hrs + TAIL_HRS`, the tail letting the final
+particle cohort clear the domain.
 
-Output is sampled every `SAMPLE_HRS` (24h), producing one NetCDF file
-with ~365 daily-mean concentrations.
+The release is continuous at unit rate (1.0 mass/hr) for the whole FY;
+concentrations are averaged every `SAMPLE_HRS` (24 h), giving ~368 daily-mean
+records in one cdump (365 emission days plus the tail), which is converted to
+NetCDF (.nc).
 
-HEAT ensemble:
-'heat_w' is the sensible heat in watts (from the panel's precomputed 
-'heat_w_k{m}' column). When it is not None, that heat is injected via an 
-EMITIMES file at unit release rate so HYSPLIT applies Briggs plume rise
-(PLRISE=1) above the physical stack; `member_tag` (e.g. "k4") suffixes the run/
-kernel paths to keep members apart. Only the EMITIMES `Heat` value differs
-between members - CONTROL grid, met, tracer, release rate, duration and sampling
-are identical. `heat_w = 0.0` is a valid member (k1): EMITIMES with zero heat
-means no plume rise.
+`_write_control()` writes CONTROL: start time, source location and stack
+height, run duration, the ~13 monthly ERA5 ARL met files (declared as "1 grid,
+n files", raising the per-grid cap from 12 to 128), the output concentration
+grid, and the sampling schedule.
+
+`_write_setup_cfg()` writes the SETUP.CFG namelist (particle counts,
+dispersion options) and ASCDATA.CFG. When `heat_w` is not None it adds
+`PLRISE = 1` and `EFILE = 'EMITIMES'`.
+
+`_write_emitimes()` (only when `heat_w` is not None) writes one FY-long
+release record at the physical stack height carrying `heat_w`, so HYSPLIT
+applies Briggs plume rise on top of the stack; the CONTROL emission rate and
+duration are zeroed so the two mechanisms do not double-count. `heat_w = None`
+is the baseline: emission from CONTROL at stack height with no plume rise.
+`heat_w = 0.0` is the equivalent zero-rise member via EMITIMES (k1).
+
+`execute()` writes the config files, runs `hycs_std`, verifies the log
+contains "Complete Hysplit", and converts the cdump to NetCDF with `con2cdf4`.
+Idempotent: returns immediately if a non-empty NetCDF already exists.
+
+`hycs_std` (the dispersion model itself) and `con2cdf4` (the binary-cdump to
+NetCDF converter) are both executables from the HYSPLIT installation, found in
+`paths.py` as 'HYCS_STD' and 'CON2CDF4'.
+
+Author: Christopher Hockey
+chrishockey2@gmail.com
+August 2026
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -47,6 +72,8 @@ from .plant import PlantYear
 _MAX_FILES_PER_GRID = 128
 
 
+# ==============================================================================
+
 def _arl_filename(year: int, month: int) -> str:
     return f"era5_{year}_{month:02d}.arl"
 
@@ -63,7 +90,9 @@ def _fy_emit_hours(year_maj: int) -> int:
 
 
 def _months_covering(start: datetime, hours: int) -> list[tuple[int, int]]:
-    """(year, month) pairs for each calendar month touched by [start, start+hours]."""
+    """
+    (year, month) pairs for each calendar month touched by [start, start+hours].
+    """
     end = start + timedelta(hours=hours)
     months: list[tuple[int, int]] = []
     cur = start.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -84,11 +113,12 @@ class HYSPLITRun:
 
     Emits continuously at unit rate from 00Z on 1 April
     `plant_year.year_maj` through 00Z on 1 April `plant_year.year_maj + 1`,
-    then tracks `TAIL_HRS` more hours. Produces one cdump file with ~365
-    daily-mean concentration records.
+    then tracks `TAIL_HRS` more hours. Produces one cdump file with ~368
+    daily-mean concentration records, covering emission plus tail.
 
-    `heat_w`     sensible heat in watts (None = baseline, no EMITIMES/plume rise).
-    `member_tag` path suffix identifying the ensemble member, e.g. "k4".
+    `heat_w`: sensible heat in watts (None = baseline, no EMITIMES/plume rise).
+    `member_tag`: path suffix identifying the ensemble member, e.g. "k4" (useful
+                  when doing the ensemble exercise).
     """
     plant_year: PlantYear
     heat_w:     float | None = None
@@ -114,11 +144,15 @@ class HYSPLITRun:
     @property
     def _use_emitimes(self) -> bool:
         # A heat value (including 0.0) means emit via EMITIMES with plume rise
-        # active; None means the original CONTROL-driven baseline.
+        # active; None means release from stack height (a value of 0.0 also does
+        # this).
         return self.heat_w is not None
 
     # config writers:
     def _write_setup_cfg(self) -> None:
+        """
+        SETUP.CFG namelist and ASCDATA.CFG; adds plume-rise keys if heated.
+        """
         lines = [
             "&SETUP",
             f"NUMPAR = {NUMPAR},",
@@ -163,9 +197,9 @@ class HYSPLITRun:
         start, _ = _fy_bounds(py.year_maj)
         yy, mm, dd, hh = start.year, start.month, start.day, start.hour
 
-        dur_hhmm = f"{self.emit_hrs:d}00"          # e.g. 8760 h -> "876000"
-        cycle_valid_hrs = self.run_hrs             # covers emission + tail
-
+        dur_hhmm = f"{self.emit_hrs:d}00"  # e.g. 8760 h -> "876000"
+        cycle_valid_hrs = self.run_hrs     # covers emission + 72hr tail at end
+        # of year
         lines = [
             "YYYY MM DD HH    DURATION(HHHH) #RECORDS",
             "YYYY MM DD HH MM DURATION(HHMM) LAT LON HGT(m) RATE(/h) AREA(m2) HEAT(W)",
@@ -179,6 +213,12 @@ class HYSPLITRun:
         (self.run_dir / "EMITIMES").write_text("\n".join(lines) + "\n")
 
     def _write_control(self) -> None:
+        """
+        CONTROL: source, met files, concentration grid and sampling.
+
+        Raises `RuntimeError` if the FY needs more ARL files than HYSPLIT's
+        per-grid compilation limit allows.
+        """
         py = self.plant_year
         start, _ = _fy_bounds(py.year_maj)
         yy, mm, dd, hh = start.year % 100, start.month, start.day, start.hour
@@ -231,9 +271,9 @@ class HYSPLITRun:
             self.cdump_path.name,
             "1",
             f"{OUTPUT_HT_M}",
-            "00 00 00 00 00",                           # sample start = sim start
-            "00 00 00 00 00",                           # sample stop  = sim end
-            f"00 {SAMPLE_HRS:02d} 00",                  # daily averages
+            "00 00 00 00 00",                         # sample start = sim start
+            "00 00 00 00 00",                         # sample stop  = sim end
+            f"00 {SAMPLE_HRS:02d} 00",                # daily averages
             "1",
             "0.0 0.0 0.0",
             "0.0 0.0 0.0 0.0 0.0",
@@ -249,6 +289,9 @@ class HYSPLITRun:
         Write config files, run hycs_std, and convert cdump to NetCDF.
         Idempotent: returns immediately if the NetCDF already exists
         and is non-empty.
+
+        Raises `RuntimeError` if the HYSPLIT log does not report
+        "Complete Hysplit", or if `con2cdf4` exits non-zero.
         """
         if self.nc_path.exists() and self.nc_path.stat().st_size > 0:
             return

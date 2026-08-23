@@ -1,4 +1,21 @@
 #!/bin/bash
+#
+# Merge monthly ERA5 GRIB files into single concatenated files for the
+# meteorological representativeness check.
+#
+# Concatenates the geopotential-merged surface files, and extracts temperature
+# and wind components at 925 hPa from the pressure-level files while merging
+# them. Both inputs are expected to be complete: 192 files each (16 calendar
+# years, 1973-1988, by 12 months).
+#
+# Output: data/intermediate/all_singles.grib and
+# data/intermediate/pressure_925_tuv.grib, the inputs to
+# 2_extract_weather.py.
+#
+# Author: Christopher Hockey
+# chrishockey2@gmail.com
+# August 2026
+
 set -euo pipefail
 
 # Create short symlink if it doesn't exist

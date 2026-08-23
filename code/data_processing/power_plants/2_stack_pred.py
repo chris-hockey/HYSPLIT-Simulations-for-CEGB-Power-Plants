@@ -1,6 +1,16 @@
 """
-Impute stack heights via log-log OLS: ln(H) = alpha + beta * ln(capacity)
-Validates via LOO cross-validation, imputes missing, writes to final.
+Impute stack heights via log-log OLS: ln(H) = alpha + beta * ln(capacity).
+
+Deduplicates the raw stack-height data (`data/raw/plant_stack_heights.csv`)
+to one row per plant, restricted to plants in the cleaned CEGB panel, and
+estimates the log-log relationship on plants with observed stack heights
+(HC3 standard errors). Predictive accuracy is assessed by leave-one-out
+cross-validation, reported as RMSE in logs and MAPE in levels.
+
+Fitted values impute the missing heights, flagged by `stack_height_imputed`.
+The panel is written to `data/final/cegb_panel_with_stacks.csv`, the input to
+the simulation pipeline, and the regression table to `stack_height_ols.tex`
+in `tables/` and the Overleaf technical appendix table directory.
 
 Author: Christopher Hockey
 chrishockey2@gmail.com
@@ -32,6 +42,12 @@ TABLE_DIR.mkdir(exist_ok=True, parents=True)
 
 OUT_DIR = PROJECT_ROOT / "data" / "final"
 OUT_DIR.mkdir(exist_ok=True, parents=True)
+
+OVERLEAF_TAB_DIR = Path(
+    "/home/chris/Royal Holloway Dropbox/Chris Hockey/Apps/Overleaf/"
+    "Coal Power and Infant Health/Technical Appendix/Tables"
+)
+
 
 COL_STACK = "max_stack_height_m"
 COL_CAPACITY = "max_cap_mw"
@@ -195,4 +211,5 @@ LOO-CV MAPE (levels)
 table_path = TABLE_DIR / "stack_height_ols.tex"
 table_path.write_text(table_tex.strip() + "\n")
 
-log.info("Wrote LaTeX table to %s", table_path)
+overleaf_table_path = OVERLEAF_TAB_DIR / "stack_height_ols.tex"
+overleaf_table_path.write_text(table_tex.strip() + "\n")

@@ -1,3 +1,23 @@
+"""
+Extract and crop ERA5 weather fields to the England domain, for the
+meteorological representativeness check.
+
+Reads the merged GRIB files from 1_merge_grib.sh and writes three NetCDF
+files: instantaneous surface fields (boundary-layer height, 2m temperature,
+10m winds), total precipitation, and 925 hPa temperature and wind components.
+Precipitation is read separately because accumulated variables carry a
+different temporal structure in the ERA5 GRIB than instantaneous ones.
+
+The 925 hPa level (~750-800 m) is retained as the level at which plume-rise
+typically places the plume centreline.
+
+Written to data/final/merged_weather/, the input to 3_plot_weather.py.
+
+Author: Christopher Hockey
+chrishockey2@gmail.com
+August 2026
+"""
+
 import logging
 import time
 from pathlib import Path
@@ -13,7 +33,10 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 main_start_time = time.time()
+
+
 # ==============================================================================
+
 WEST = -7.25
 EAST = 2.75
 SOUTH = 49.00
@@ -29,11 +52,12 @@ def size_mb(path: Path) -> float:
     """Return file size in MB."""
     return path.stat().st_size / 1024**2
 
+
 # ==============================================================================
 # surface instantaneous variables:
 # (accumulated variables such as total precipitation are stored with a different
 # temporal structure in the ERA5 GRIB and are therefore read separately)
-
+# ==============================================================================
 
 out = OUT_DIR / "instant_singles.nc"
 start = time.perf_counter()
@@ -57,7 +81,7 @@ instant = instant.sel(
     longitude=slice(WEST, EAST),
     latitude=slice(NORTH, SOUTH),
 )
-# retain only boundry layer height, temp, wind vectors
+# retain only boundary layer height, temp, wind vectors
 instant = instant[
     ["blh", "t2m", "u10", "v10",]
 ]
@@ -71,8 +95,10 @@ log.info(
     time.perf_counter() - start,
 )
 
-# ------------------------------------------------------------------------------
-# total precip seperately:
+
+# ==============================================================================
+# total precip separately:
+# ==============================================================================
 
 out = OUT_DIR / "total_precip.nc"
 start = time.perf_counter()
@@ -107,11 +133,13 @@ log.info(
     time.perf_counter() - start,
 )
 
-# ------------------------------------------------------------------------------
+
+# ==============================================================================
 # 925 hPa pressure-level meteorology:
 # already just retained the temp and wind vector components just the pressure
-# level 925 hPa (lower troposhere, ~750-800metres up, where the majority of
+# level 925 hPa (lower troposphere, ~750-800metres up, where the majority of
 # plume rise takes the plume centreline to), so just crop
+# ==============================================================================
 
 out = OUT_DIR / "pressure_925_tuv.nc"
 start = time.perf_counter()
@@ -141,7 +169,9 @@ log.info(
     time.perf_counter() - start,
 )
 
+
 # ==============================================================================
+
 main_end_time = time.time()
 log.info("Weather extraction complete. Total run time: %.2f seconds",
          main_end_time - main_start_time)

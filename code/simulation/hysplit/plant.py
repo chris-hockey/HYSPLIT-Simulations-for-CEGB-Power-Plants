@@ -1,14 +1,23 @@
 """
-Plant-year observation from the CEGB panel.
+`PlantYear` is a class of object that represents one plant-year observation from
+the CEGB panel.
 
-`PlantYear` stores all attributes for a power plant in a given financial
-year: time-invariant fields (id, name, location, stack height) plus the
-year-specific fuel input. Constructed from the CEGB panel via
-`PlantYear.from_panel()`, which reads the CSV once.
+`PlantYear` stores some attributes for a power plant in a given financial year:
+time-invariant fields (id, name, location, stack height) plus the year-specific
+fuel input.
+
+`PlantYear` is constructed from the CEGB panel via `PlantYear.from_panel()`,
+which reads the main CEGB CSV and selects the attributes from the specified
+year.
 
 `calendar_months()` returns the 12 (calendar_year, calendar_month) pairs
 for the financial year, April `year_maj` through March `year_maj + 1`.
+
+Author: Christopher Hockey
+chrishockey2@gmail.com
+August 2026
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,8 +27,8 @@ import pandas as pd
 
 from .paths import PANEL_PATH
 
-# ==============================================================================
 
+# ==============================================================================
 
 @dataclass
 class PlantYear:

@@ -1,5 +1,19 @@
 #!/bin/bash
-# convert_to_arl.sh
+#
+# Convert monthly ERA5 GRIB files to HYSPLIT's binary ARL format.
+#
+# Pairs each monthly pressure-level file in data/raw/pressures with its
+# geopotential-merged surface file from 2_merge_geopt.sh and runs era52arl
+# (HYSPLIT's own conversion tool, included in the HYSPLIT download) using the
+# reference config in configs/. Each conversion runs in a temporary working
+# directory because era52arl writes fixed-name files to the cwd.
+#
+# Output: data/final/arl/era5_YYYY_MM.arl, plus a build log and a chk_file
+# verification log per month. These are the met input to the simulations.
+#
+# Author: Christopher Hockey
+# chrishockey2@gmail.com
+# August 2026
 
 set -euo pipefail
 shopt -s nullglob
@@ -15,13 +29,13 @@ RAW_PRESSURE="/home/chris/htest/data/raw/pressures"
 MERGED_SINGLES="/home/chris/htest/data/intermediate/singles_merged"
 FINAL="/home/chris/htest/data/final/arl"
 BUILD_DIR="$(dirname "$(realpath "$0")")"
-REF_CFG="/home/chris/htest/configs/era52arl_4lev_reference.cfg"
+REF_CFG="/home/chris/htest/configs/era52arl_8lev_reference.cfg"
 
 mkdir -p "$FINAL"
 
-echo "SCRIPT    : $(realpath "$0")"
-echo "BUILD_DIR : $BUILD_DIR"
-echo "REF_CFG   : $REF_CFG"
+echo "SCRIPT: $(realpath "$0")"
+echo "BUILD_DIR: $BUILD_DIR"
+echo "REF_CFG: $REF_CFG"
 grep -E "numlev|plev|numsfc|sfcarl" "$REF_CFG"
 
 pl_files=("${RAW_PRESSURE}"/era5_pl_????_??.grib)

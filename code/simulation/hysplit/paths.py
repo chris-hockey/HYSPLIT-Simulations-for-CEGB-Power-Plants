@@ -1,12 +1,18 @@
 """
 Global list of file paths and simulation parameters called upon
+
+Author: Christopher Hockey
+chrishockey2@gmail.com
+August 2026
 """
 
 from pathlib import Path
 
 # project root
 PROJECT_ROOT = Path(
-    "/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants")
+    "/home/chris/Documents/hysplit_test/"
+    "HYSPLIT-Simulations-for-CEGB-Power-Plants"
+)
 
 # HYSPLIT binaries
 HYSPLIT_DIR = Path.home() / "opt/hysplit/hysplit.v5.4.2_RHEL9.7_public"
@@ -41,5 +47,7 @@ MAXPAR = 100_000    # cap on particles on grid at any instant
 
 # dropbox directory for remotely checking errors
 DROPBOX_DIR = Path(
-    "/home/chris/Royal Holloway Dropbox/Chris Hockey/PhD/cfpp2/hysplit/hysplit_simulations/error_log")
+    "/home/chris/Royal Holloway Dropbox/Chris Hockey/PhD/cfpp2/"
+    "hysplit/hysplit_simulations/error_log"
+)
 RUN_LOG_PATH = DROPBOX_DIR / "run_log.csv"

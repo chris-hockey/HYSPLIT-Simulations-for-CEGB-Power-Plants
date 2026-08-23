@@ -1,4 +1,21 @@
 #!/bin/bash
+#
+# Merge the static ERA5 geopotential field into each monthly surface file,
+# timestamped to match.
+#
+# era52arl requires terrain height on the same time axis as the surface
+# fields, but the geopotential is downloaded once as a static field. For each
+# monthly file in data/raw/singles, this clones the static field to every
+# 6-hourly timestamp (taken from 2m temperature) and concatenates it onto the
+# surface records.
+#
+# Output: data/intermediate/singles_merged/era5_sfc_an_YYYY_MM_z.grib, the
+# auxiliary input to 3_convert_arl.sh.
+#
+# Author: Christopher Hockey
+# chrishockey2@gmail.com
+# August 2026
+
 set -euo pipefail
 shopt -s nullglob
 

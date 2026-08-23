@@ -1,5 +1,20 @@
 """
 Clean power plant data to the sample of plants used in HYSPLIT simulations.
+
+Reads the raw CEGB panel (`data/raw/cegb_panel.csv`) and resolves dual-fired
+plants to a single fuel category (oil in the 1984/85 strike year, coal
+otherwise), derives fuel input from electricity supplied and thermal
+efficiency, and constructs the seven sensible-heat values per plant-year for
+the plume-rise ensemble (HEAT_k = k_fuel x capacity_MW x 1e6, with k grids
+co-indexed across coal, oil and gas turbine).
+
+The sample is restricted to `year_maj` 1973 onwards, the three fossil fuel
+categories, and plant-years with positive fuel input. Written to
+`data/intermediate/clean_cegb.csv`, the input to `2_stack_pred.py`.
+
+Author: Christopher Hockey
+chrishockey2@gmail.com
+August 2026
 """
 
 import logging
@@ -24,7 +39,7 @@ RAW_DIR = PROJECT_ROOT / "data" / "raw"
 OUT_DIR = PROJECT_ROOT / "data" / "intermediate"
 OUT_DIR.mkdir(exist_ok=True, parents=True)
 
-PLANT_TYPES = ["coal", "oil", "gt"]
+FUELS = ["coal", "oil", "gt"]
 
 # Fuel-category coefficients for HEAT ensemble runs.
 K_COAL = (0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.18)
@@ -118,13 +133,13 @@ for m in range(len(K_COAL)):
 
 
 # ==============================================================================
-# restrict sample to year_maj 1973 onwards and only coal (and df), oil, gt
+# # restrict sample to year_maj 1973 onwards and fossil fuel categories only
 # ==============================================================================
 
 cfpp_trimmed = (
     cfpp[
         (cfpp["year_maj"] >= 1973)
-        & cfpp["fuel_cat"].isin(PLANT_TYPES)
+        & cfpp["fuel_cat"].isin(FUELS)
         & (cfpp["fuel_input_gwh"].fillna(0) > 0)
     ]
     .drop_duplicates(subset=["plant_id", "year_maj"])

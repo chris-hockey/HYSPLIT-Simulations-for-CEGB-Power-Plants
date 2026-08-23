@@ -1,21 +1,36 @@
 """
-Download ERA5 pressure-level and single-level fields for HYSPLIT,
-monthly chunks, parallel, resumable.
+Download ERA5 meteorological fields for HYSPLIT in monthly chunks, in
+parallel and resumable.
 
-Study period: FY 1974/75 - 1987/88 (Apr 1974 - Mar 1988).
-Pulls full calendar years 1973-1988 as buffer; resumability makes
-the over-pull cheap.
+Study period is FY 1974/75-1987/88 (Apr 1974 - Mar 1988); full calendar years
+1973-1988 are pulled as a buffer, which resumability makes cheap.
+
+Pressure-level fields (geopotential, temperature, U/V wind, vertical
+velocity, relative humidity) on eight levels 700-1000 hPa, and single-level
+surface fields (10m winds, 2m temperature, surface pressure, BLH, heat
+fluxes, precipitation, cloud cover), 6-hourly on a box covering Britain.
+
+Written to data/raw/pressures and data/raw/singles as monthly GRIB files.
+Downloads skip any target that already exists, so the script can be re-run
+after interruption.
+
+Author: Christopher Hockey
+chrishockey2@gmail.com
+August 2026
 """
 
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
 import cdsapi
 
-ROOT = "/home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants/data/raw"
-PRESSURE_DIR = os.path.join(ROOT, "pressures")
-SINGLES_DIR = os.path.join(ROOT, "singles")
-os.makedirs(PRESSURE_DIR, exist_ok=True)
-os.makedirs(SINGLES_DIR,  exist_ok=True)
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+RAW_DIR = PROJECT_ROOT / "data" / "raw"
+PRESSURE_DIR = RAW_DIR / "pressures"
+SINGLES_DIR = RAW_DIR / "singles"
+PRESSURE_DIR.mkdir(parents=True, exist_ok=True)
+SINGLES_DIR.mkdir(parents=True, exist_ok=True)
 
 YEARS = range(1973, 1989)
 MONTHS = range(1, 13)
@@ -58,6 +73,8 @@ SFC_BASE = {
     "area": AREA,
 }
 
+
+# ==============================================================================
 
 def fetch(dataset, base, year, month, target):
     """Download one month. Skips if file already exists and is non-empty."""
