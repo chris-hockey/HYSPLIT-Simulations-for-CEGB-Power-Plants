@@ -188,3 +188,4 @@ log.info(
 # ==============================================================================
 out_path = OUT_DIR / "clean_cegb.csv"
 cfpp_trimmed.to_csv(out_path, index=False)
+# GIT_TEST
