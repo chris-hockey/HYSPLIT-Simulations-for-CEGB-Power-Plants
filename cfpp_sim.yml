@@ -1,0 +1,29 @@
+name: cfpp_sim
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10.20
+  - pip=26.0.1
+
+  # Core numerical/data
+  - numpy=2.2.6
+  - pandas=2.3.3
+  - scipy=1.15.2
+
+  # ERA5 / HYSPLIT data processing
+  - xarray=2025.6.1
+  - cfgrib=0.9.15.1
+  - netcdf4=1.7.4
+  - cdsapi=0.7.7
+
+  # GRIB command-line utilities
+  - eccodes=2.46.0
+
+  # Analysis
+  - statsmodels=0.14.6
+  - matplotlib=3.10.8
+  - pip:
+      - pyfixest==0.60.0
