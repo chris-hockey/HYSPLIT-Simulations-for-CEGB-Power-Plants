@@ -22,7 +22,7 @@ HYSPLIT_ROOT="/home/chris/opt/hysplit/hysplit.v5.4.2_RHEL9.7_public"
 ERA52ARL_BIN="${HYSPLIT_ROOT}/exec/era52arl"
 
 if [ ! -e /home/chris/htest ]; then
-    ln -s /home/chris/Documents/hysplit_test/HYSPLIT-Simulations-for-CEGB-Power-Plants /home/chris/htest
+    ln -s /home/chris/Documents/cfpp_hysplit/HYSPLIT-Simulations-for-CEGB-Power-Plants /home/chris/htest
 fi
 
 RAW_PRESSURE="/home/chris/htest/data/raw/pressures"
