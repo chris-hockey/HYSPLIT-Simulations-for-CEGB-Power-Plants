@@ -22,8 +22,10 @@ n files", raising the per-grid cap from 12 to 128), the output concentration
 grid, and the sampling schedule.
 
 `_write_setup_cfg()` writes the SETUP.CFG namelist (particle counts,
-dispersion options) and ASCDATA.CFG. When `heat_w` is not None it adds
-`PLRISE = 1` and `EFILE = 'EMITIMES'`.
+dispersion options) and ASCDATA.CFG. Boundary-layer stability is derived from
+the wind and temperature profiles (KBLS=2) since ERA5 provides surface fluxes
+only as accumulations. When `heat_w` is not None it adds `PLRISE = 1` and
+`EFILE = 'EMITIMES'`.
 
 `_write_emitimes()` (only when `heat_w` is not None) writes one FY-long
 release record at the physical stack height carrying `heat_w`, so HYSPLIT
@@ -161,7 +163,10 @@ class HYSPLITRun:
             "KHMAX = 9999,",
             "DELT = 0.0,",
             "KDEF = 0,",
-            "KBLS = 2,",
+            "KBLS = 2,",    # Stability from wind/temperature profiles rather
+                            # than surface fluxes, which ERA5 provides only as
+                            # accumulations and which era52arl does not carry
+                            # into the ARL files.
         ]
         if self._use_emitimes:
             # Briggs plume rise, driven by the EMITIMES Heat column.
