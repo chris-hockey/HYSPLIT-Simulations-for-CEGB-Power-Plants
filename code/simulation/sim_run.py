@@ -50,7 +50,7 @@ from hysplit.paths import PANEL_PATH, RUN_LOG_PATH
 # ==============================================================================
 
 MAX_WORKERS = 10
-N_JOBS = None  # Specify a number for a test, None for full run.
+N_JOBS = None  # Specify a number for a test, None for full run
 
 LOG_FIELDS = [
     "timestamp",
