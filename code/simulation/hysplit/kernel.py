@@ -140,6 +140,7 @@ class AnnualKernel:
             },
         )
         ds.close()
+        self.kernel_path.parent.mkdir(parents=True, exist_ok=True)
         result.to_netcdf(self.kernel_path)
         print(f"  annual kernel saved: {self.kernel_path.name}")
         return self.kernel_path
