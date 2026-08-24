@@ -20,7 +20,11 @@ run's own EMITIMES file rather than the panel, so each kernel records the heat
 HYSPLIT actually used. A run directory with no EMITIMES is a baseline run with
 no plume rise and is skipped, as are ensemble directories carrying a member tag.
 
-Intended to be run once, before resuming `sim_run.py`.
+Every kernel in `ANNUAL_DIR` is then validated (see `validate_kernels`), and the
+script exits non-zero if any check fails.
+
+Lives alongside `sim_run.py` in `code/simulation/` so it picks up the `hysplit`
+package the same way. Intended to be run once, before resuming `sim_run.py`.
 
 Author: Christopher Hockey
 chrishockey2@gmail.com
@@ -33,11 +37,11 @@ import sys
 import time
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "code" / "simulation"))
+import numpy as np
+import xarray as xr
 
-from hysplit import AnnualKernel, PlantYear  # noqa: E402
-from hysplit.paths import ANNUAL_DIR, RUNS_DIR  # noqa: E402
+from hysplit import AnnualKernel, PlantYear
+from hysplit.paths import ANNUAL_DIR, ENSEMBLE_ROOT, RUNS_DIR
 
 
 # ==============================================================================
@@ -70,10 +74,121 @@ def emitimes_heat_w(emitimes_path: Path) -> float:
 
 
 # ==============================================================================
+# validation
+# ==============================================================================
+
+def ensemble_twin(kernel_path: Path, heat_w: float) -> Path | None:
+    """
+    The calibration-ensemble kernel for the same plant-year run at the same
+    heat, or None if there is none.
+
+    Members are matched on their stored `heat_w` rather than on a member tag,
+    so this does not need to know which member production selected, and stays
+    correct if that selection changes. Only the ensemble year has counterparts.
+    """
+    pid_year = kernel_path.stem[len("kernel_"):]
+    for cand in sorted(ENSEMBLE_ROOT.glob(f"kernels/kernel_{pid_year}_k*.nc")):
+        with xr.open_dataset(cand) as ds:
+            twin_heat = float(ds.attrs.get("heat_w", float("nan")))
+        if np.isclose(twin_heat, heat_w, rtol=1e-6):
+            return cand
+    return None
+
+
+def validate_kernels() -> bool:
+    """
+    Check every annual kernel in `ANNUAL_DIR` is usable, returning True if all
+    checks pass.
+
+    Each kernel must be finite, non-negative, carry some mass, record a
+    sensible heat (a NaN means the run had no plume rise), and hold as many
+    daily records as its run length implies. All kernels must share one grid,
+    since they are summed across plants downstream. Where a calibration-
+    ensemble kernel exists for the same plant-year and heat, the two must be
+    identical: that confirms the production configuration reproduces the
+    calibrated one.
+    """
+    paths = sorted(ANNUAL_DIR.glob("kernel_*.nc"))
+    if not paths:
+        print("\nvalidation: no kernels found")
+        return False
+
+    problems: list[str] = []
+    ref_lats = ref_lons = None
+    n_twin = n_match = 0
+
+    for p in paths:
+        with xr.open_dataset(p) as ds:
+            arr = ds["transport_kernel"].values
+            lats = ds["latitude"].values
+            lons = ds["longitude"].values
+            attrs = dict(ds.attrs)
+
+        if not np.isfinite(arr).all():
+            problems.append(f"{p.name}: non-finite values")
+        if (arr < 0).any():
+            problems.append(f"{p.name}: negative concentrations")
+        if not arr.max() > 0:
+            problems.append(f"{p.name}: no mass anywhere on the grid")
+
+        # sampling covers the emission window, not the tail: a full run holds
+        # one record per day of the financial year, 366 when it spans a leap
+        # February. Anything short of that is a truncated run.
+        emit_hrs = attrs.get("emit_hrs")
+        sample_hrs = attrs.get("sample_hrs")
+        n_records = attrs.get("n_daily_records")
+        if None not in (emit_hrs, sample_hrs, n_records):
+            expected = int(emit_hrs) // int(sample_hrs)
+            if int(n_records) != expected:
+                problems.append(
+                    f"{p.name}: {int(n_records)} daily records, "
+                    f"expected {expected}"
+                )
+
+        heat_w = float(attrs.get("heat_w", float("nan")))
+        if not np.isfinite(heat_w):
+            problems.append(f"{p.name}: no heat recorded (baseline run?)")
+
+        if ref_lats is None:
+            ref_lats, ref_lons = lats, lons
+        elif not (np.array_equal(lats, ref_lats)
+                  and np.array_equal(lons, ref_lons)):
+            problems.append(f"{p.name}: grid differs from the other kernels")
+
+        twin = ensemble_twin(p, heat_w) if np.isfinite(heat_w) else None
+        if twin is not None:
+            n_twin += 1
+            with xr.open_dataset(twin) as ds_twin:
+                same = np.array_equal(
+                    arr, ds_twin["transport_kernel"].values
+                )
+            if same:
+                n_match += 1
+            else:
+                problems.append(
+                    f"{p.name}: differs from ensemble {twin.name}"
+                )
+
+    print(f"\nvalidation: {len(paths)} kernels checked, {n_twin} with an "
+          f"ensemble counterpart ({n_match} identical)")
+
+    if problems:
+        print(f"{len(problems)} problems:")
+        for msg in problems[:20]:
+            print(f"  {msg}")
+        if len(problems) > 20:
+            print(f"  ... and {len(problems) - 20} more")
+        return False
+
+    print("all checks passed")
+    return True
+
+
+# ==============================================================================
 # backfill
 # ==============================================================================
 
-def main() -> None:
+def main() -> bool:
     ANNUAL_DIR.mkdir(parents=True, exist_ok=True)
 
     run_dirs = sorted(p for p in RUNS_DIR.iterdir() if p.is_dir())
@@ -129,11 +244,11 @@ def main() -> None:
         f"{n_done} already present, {n_nosim} without a completed "
         f"simulation, {n_skip} skipped, {n_fail} failed"
     )
-    print(f"kernels now in {ANNUAL_DIR}: "
-          f"{len(list(ANNUAL_DIR.glob('kernel_*.nc')))}")
+
+    return validate_kernels() and n_fail == 0
 
 
 # ==============================================================================
 
 if __name__ == "__main__":
-    main()
+    sys.exit(0 if main() else 1)
