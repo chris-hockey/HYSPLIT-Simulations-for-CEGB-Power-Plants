@@ -1,17 +1,18 @@
+# data and outputs
 /data/
-/code/testing/gis/
-/code/data processing/build/ERA52ARL.MESSAGE
-/code/data processing/era5/MESSAGE
-/code/data processing/era5/WARNING
-/code/data processing/era5/arldata.cfg
-/code/data processing/era5/era52arl.cfg
-/code/data processing/era5/ERA52ARL.CFG
 /papers/
-*.png
 /plots
-code/simulation/hysplit/__pycache__
-/run1/
 /tables/
 /instructions/
+*.png
+
+# HYSPLIT and era52arl scratch files, written to the working directory
 MESSAGE
 WARNING
+ERA52ARL.CFG
+ERA52ARL.MESSAGE
+arldata.cfg
+era52arl.cfg
+
+# caches
+__pycache__/
