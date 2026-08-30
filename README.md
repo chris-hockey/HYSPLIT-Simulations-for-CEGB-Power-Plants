@@ -4,3 +4,4 @@ Code and documentation for running batch HYSPLIT concentration simulations to lo
 To do:
 - write a README
 - create docker container
+- add HYSPLIT installation instructions and a checksum for the exact version
