@@ -5,3 +5,4 @@ To do:
 - write a README
 - create docker container
 - add HYSPLIT installation instructions and a checksum for the exact version
+- file repo and structure md
