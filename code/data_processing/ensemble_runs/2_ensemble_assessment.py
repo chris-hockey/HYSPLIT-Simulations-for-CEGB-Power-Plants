@@ -54,10 +54,11 @@ POLLUTION_DATA = (
 PLOT_DIR = PROJECT_ROOT / "plots"
 PLOT_DIR.mkdir(parents=True, exist_ok=True)
 
-OVERLEAF_PLOT_DIR = Path(
-    "/home/chris/Royal Holloway Dropbox/Chris Hockey/Apps/Overleaf/"
-    "Coal Power and Infant Health/Technical Appendix/Plots"
-)
+# Used to send outputs to the overleaf doc to write the paper
+# OVERLEAF_PLOT_DIR = Path(
+#     "/home/chris/Royal Holloway Dropbox/Chris Hockey/Apps/Overleaf/"
+#     "Coal Power and Infant Health/Technical Appendix/Plots"
+# )
 
 FUELS = ("coal", "oil", "gt")
 MEMBERS = [f"k{i}" for i in range(1, 8)]
@@ -241,10 +242,10 @@ fig.savefig(
     bbox_inches="tight",
 )
 
-fig.savefig(
-    OVERLEAF_PLOT_DIR / "ensemble_within_r2.pdf",
-    bbox_inches="tight",
-)
+# fig.savefig(
+#     OVERLEAF_PLOT_DIR / "ensemble_within_r2.pdf",
+#     bbox_inches="tight",
+# )
 
 # ==============================================================================
 # diagnostic output

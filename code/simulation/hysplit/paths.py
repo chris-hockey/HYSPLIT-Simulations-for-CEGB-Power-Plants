@@ -9,13 +9,11 @@ August 2026
 from pathlib import Path
 
 # project root
-PROJECT_ROOT = Path(
-    "/home/chris/Documents/cfpp_hysplit/"
-    "HYSPLIT-Simulations-for-CEGB-Power-Plants"
-)
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 # HYSPLIT binaries
 HYSPLIT_DIR = Path.home() / "opt/hysplit/hysplit.v5.4.2_RHEL9.7_public"
+BDYFILES_DIR = HYSPLIT_DIR / "bdyfiles"
 HYCS_STD = HYSPLIT_DIR / "exec/hycs_std"
 CON2CDF4 = HYSPLIT_DIR / "exec/con2cdf4"
 

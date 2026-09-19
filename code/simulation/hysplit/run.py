@@ -56,6 +56,7 @@ from pathlib import Path
 
 from .paths import (
     ARL_DIR,
+    BDYFILES_DIR,
     CON2CDF4,
     GRID_CENTRE,
     GRID_SPACING,
@@ -174,10 +175,9 @@ class HYSPLITRun:
         lines.append("/")   # single closing slash, AFTER PLRISE/EFILE
         (self.run_dir / "SETUP.CFG").write_text("\n".join(lines) + "\n")
 
-        bdyfiles = (
-            Path.home()
-            / "opt/hysplit/hysplit.v5.4.2_RHEL9.7_public/bdyfiles"
-        )
+        if not BDYFILES_DIR.is_dir():
+            raise FileNotFoundError(f"bdyfiles not found at {BDYFILES_DIR}")
+
         (self.run_dir / "ASCDATA.CFG").write_text(
             "-90.0  -180.0  lat/lon of lower left corner (last record in file)\n"
             "1.0     1.0    lat/lon spacing in degrees between data points\n"

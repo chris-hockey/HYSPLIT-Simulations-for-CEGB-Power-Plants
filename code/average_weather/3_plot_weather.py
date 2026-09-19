@@ -31,10 +31,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data" / "final" / "merged_weather"
 PLOT_DIR = PROJECT_ROOT / "plots"
 PLOT_DIR.mkdir(parents=True, exist_ok=True)
-OVERLEAF_PLOT_DIR = Path(
-    "/home/chris/Royal Holloway Dropbox/Chris Hockey/Apps/Overleaf/"
-    "Coal Power and Infant Health/Technical Appendix/Plots"
-)
+
+# Used to send outputs to the overleaf doc to write the paper
+# OVERLEAF_PLOT_DIR = Path(
+#     "/home/chris/Royal Holloway Dropbox/Chris Hockey/Apps/Overleaf/"
+#     "Coal Power and Infant Health/Technical Appendix/Plots"
+# )
 
 TARGET_YEAR = 1981
 
@@ -256,10 +258,10 @@ fig.savefig(
 )
 
 
-out_overleaf = OVERLEAF_PLOT_DIR / \
-    f"weather_{TARGET_YEAR}_{(TARGET_YEAR + 1) % 100:02d}_comparison.pdf"
+# out_overleaf = OVERLEAF_PLOT_DIR / \
+#     f"weather_{TARGET_YEAR}_{(TARGET_YEAR + 1) % 100:02d}_comparison.pdf"
 
-fig.savefig(
-    out_overleaf,
-    bbox_inches="tight",
-)
+# fig.savefig(
+#     out_overleaf,
+#     bbox_inches="tight",
+# )

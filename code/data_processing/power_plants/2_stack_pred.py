@@ -43,10 +43,11 @@ TABLE_DIR.mkdir(exist_ok=True, parents=True)
 OUT_DIR = PROJECT_ROOT / "data" / "final"
 OUT_DIR.mkdir(exist_ok=True, parents=True)
 
-OVERLEAF_TAB_DIR = Path(
-    "/home/chris/Royal Holloway Dropbox/Chris Hockey/Apps/Overleaf/"
-    "Coal Power and Infant Health/Technical Appendix/Tables"
-)
+# Used to send outputs to the overleaf doc to write the paper
+# OVERLEAF_TAB_DIR = Path(
+#     "/home/chris/Royal Holloway Dropbox/Chris Hockey/Apps/Overleaf/"
+#     "Coal Power and Infant Health/Technical Appendix/Tables"
+# )
 
 
 COL_STACK = "max_stack_height_m"
@@ -211,5 +212,5 @@ LOO-CV MAPE (levels)
 table_path = TABLE_DIR / "stack_height_ols.tex"
 table_path.write_text(table_tex.strip() + "\n")
 
-overleaf_table_path = OVERLEAF_TAB_DIR / "stack_height_ols.tex"
-overleaf_table_path.write_text(table_tex.strip() + "\n")
+# overleaf_table_path = OVERLEAF_TAB_DIR / "stack_height_ols.tex"
+# overleaf_table_path.write_text(table_tex.strip() + "\n")
