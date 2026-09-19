@@ -184,7 +184,7 @@ class HYSPLITRun:
             "180     360    lat/lon number of data points\n"
             "2              default land use category\n"
             "0.2            default roughness length (meters)\n"
-            f"'{bdyfiles}/' directory location of data files\n"
+            f"'{BDYFILES_DIR}/' directory location of data files\n"
         )
 
     def _write_emitimes(self) -> None:
