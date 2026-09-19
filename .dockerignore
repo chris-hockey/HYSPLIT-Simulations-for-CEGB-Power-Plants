@@ -1,0 +1,3 @@
+# Only the Conda environment spec is needed from the repository.
+*
+!cfpp_sim.yml
