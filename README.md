@@ -6,3 +6,6 @@ To do:
 - create docker container
 - add HYSPLIT installation instructions and a checksum for the exact version
 - file repo and structure md
+- config.yaml
+- data download md
+- running instructions md
