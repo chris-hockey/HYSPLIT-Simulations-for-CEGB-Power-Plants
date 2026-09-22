@@ -9,3 +9,4 @@ To do:
 - config.yaml
 - data download md
 - running instructions md
+- docs folder with additiona code md that describes why there is the kernel backfill and the oil option? I.e. a run log
