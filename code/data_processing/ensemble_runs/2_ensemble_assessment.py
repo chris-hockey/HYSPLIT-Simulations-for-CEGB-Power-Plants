@@ -74,6 +74,12 @@ FUEL_LABELS = {
     "gt": "Gas turbine",
 }
 
+# minimum share of days in the month with a reading
+COV_MIN = 0.8
+COV_COLS = {
+    "monthly_mean_so2_ugm3": "monthly_cov_so2",
+    "monthly_mean_bs_ugm3": "monthly_cov_bs",
+}
 
 # ==============================================================================
 # estimate fixed-effects calibration regressions
@@ -95,6 +101,12 @@ monthly[e_cols] *= 1e8
 rows = []
 
 for ycol in OUTCOMES:
+    # coverage differs by pollutant, so the sample is formed per outcome
+    est = monthly.loc[monthly[COV_COLS[ycol]] >= COV_MIN]
+    print(
+        f"{ycol}: {len(est):,} of {len(monthly):,} station-months at "
+        f"coverage >= {COV_MIN:.0%}"
+    )
     for fuel in FUELS:
         for member in MEMBERS:
             xcol = f"e_{fuel}_{member}"
@@ -108,7 +120,7 @@ for ycol in OUTCOMES:
             # are month fixed effects
             fit = pf.feols(
                 f"{ycol} ~ {xcol} | station_id + ym",
-                data=monthly,
+                data=est,
             )
 
             beta = fit.coef().loc[xcol]
