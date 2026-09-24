@@ -8,6 +8,11 @@ exposure, using the station-month panel written by `ensemble_treatment.py`
 (`data/final/ensemble_stations.csv`). Candidate values of k are ranked by within
 R2.
 
+Station-months enter the sample when at least `COV_MIN` of the month's days
+carry a reading, applied to the pollutant being explained. A monthly mean built
+from three days is mostly noise, and it would otherwise weigh on the ranking as
+heavily as a mean built from thirty.
+
 Regression coefficients and within correlations are retained as diagnostics:
 the coefficient sign checks whether simulated exposure is associated with
 observed pollution in the expected direction, while within R2 remains the
@@ -55,10 +60,10 @@ PLOT_DIR = PROJECT_ROOT / "plots"
 PLOT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Used to send outputs to the overleaf doc to write the paper
-# OVERLEAF_PLOT_DIR = Path(
-#     "/home/chris/Royal Holloway Dropbox/Chris Hockey/Apps/Overleaf/"
-#     "Coal Power and Infant Health/Technical Appendix/Plots"
-# )
+OVERLEAF_PLOT_DIR = Path(
+    "/home/chris/Royal Holloway Dropbox/Chris Hockey/Apps/Overleaf/"
+    "Coal Power and Infant Health/Technical Appendix/Plots"
+)
 
 FUELS = ("coal", "oil", "gt")
 MEMBERS = [f"k{i}" for i in range(1, 8)]
@@ -68,18 +73,21 @@ OUTCOMES = {
     "monthly_mean_bs_ugm3": "Monthly mean black smoke (µg/m³)",
 }
 
+# Minimum share of the month's days with a reading, matching the coverage rule
+# used in the main analysis. Set to 0 to estimate on every station-month
+COV_MIN = 0.75
+
+COV_COLS = {
+    "monthly_mean_so2_ugm3": "monthly_cov_so2",
+    "monthly_mean_bs_ugm3": "monthly_cov_bs",
+}
+
 FUEL_LABELS = {
     "coal": "Coal",
     "oil": "Oil",
     "gt": "Gas turbine",
 }
 
-# minimum share of days in the month with a reading
-COV_MIN = 0.8
-COV_COLS = {
-    "monthly_mean_so2_ugm3": "monthly_cov_so2",
-    "monthly_mean_bs_ugm3": "monthly_cov_bs",
-}
 
 # ==============================================================================
 # estimate fixed-effects calibration regressions
@@ -107,6 +115,7 @@ for ycol in OUTCOMES:
         f"{ycol}: {len(est):,} of {len(monthly):,} station-months at "
         f"coverage >= {COV_MIN:.0%}"
     )
+
     for fuel in FUELS:
         for member in MEMBERS:
             xcol = f"e_{fuel}_{member}"
@@ -154,13 +163,51 @@ res = pd.DataFrame(rows)
 
 
 # ==============================================================================
+# selection criterion
+# ==============================================================================
+
+def criterion(fuel: str) -> pd.Series:
+    """
+    Total within R2 across the two pollutants, by ensemble member.
+
+    Each pollutant enters once, so the member that explains the most variation
+    across both monitors is selected. Adding the two is a ranking device rather
+    than a quantity with an interpretation of its own.
+    """
+    return (
+        res.loc[res["fuel"] == fuel]
+        .pivot(index="member", columns="spec", values="within_r2")
+        .loc[MEMBERS]
+        .sum(axis=1)
+    )
+
+
+# the margin over the runner-up says whether a selection is sharp or a tie
+selection = pd.DataFrame(
+    [
+        {
+            "fuel": fuel,
+            "selected": criterion(fuel).idxmax(),
+            "total_within_r2": criterion(fuel).max(),
+            "margin_over_runner_up": (
+                criterion(fuel).max()
+                / criterion(fuel).drop(index=criterion(fuel).idxmax()).max()
+                - 1
+            ),
+        }
+        for fuel in FUELS
+    ]
+)
+
+
+# ==============================================================================
 # plot within R2 across plume-rise parameters
 # ==============================================================================
 
 fig, axes = plt.subplots(
     3,
-    2,
-    figsize=(12, 10),
+    3,
+    figsize=(16, 10),
     sharex=True,
 )
 
@@ -214,16 +261,6 @@ for i, fuel in enumerate(FUELS):
         if i == 0:
             ax.set_title(ylab)
 
-        if j == len(OUTCOMES) - 1:
-            ax.text(
-                1.03,
-                0.5,
-                FUEL_LABELS[fuel],
-                transform=ax.transAxes,
-                rotation=270,
-                va="center",
-            )
-
         # report the number of observations actually retained by PyFixest
         # after missing values and singleton fixed effects are removed
         nobs = sub["nobs"].iloc[0]
@@ -237,8 +274,52 @@ for i, fuel in enumerate(FUELS):
             fontsize=8,
         )
 
+    # third column: the quantity the selection rule reads
+    ax = axes[i, 2]
+    tot = criterion(fuel)
+
+    ax.plot(x, tot, color=f"C{i}", marker="o", markersize=3)
+
+    peak = tot.idxmax()
+    ax.plot(
+        MEMBERS.index(peak) + 1,
+        tot[peak],
+        color=f"C{i}",
+        marker="o",
+        markersize=7,
+        markerfacecolor="white",
+    )
+
+    ax.set_xticks(range(1, len(MEMBERS) + 1), MEMBERS)
+    ax.set_ylabel(r"Sum of within $R^2$")
+    ax.grid(alpha=0.2)
+
+    if i == 0:
+        ax.set_title("Selection criterion")
+
+    # how far the selected member stands above the next best
+    margin = selection.loc[selection["fuel"] == fuel, "margin_over_runner_up"]
+    ax.text(
+        0.5,
+        0.03,
+        f"{peak}, ahead by {float(margin.iloc[0]):.1%}",
+        transform=ax.transAxes,
+        ha="center",
+        fontsize=8,
+    )
+
+    ax.text(
+        1.03,
+        0.5,
+        FUEL_LABELS[fuel],
+        transform=ax.transAxes,
+        rotation=270,
+        va="center",
+    )
+
 fig.supxlabel(
-    "Ensemble member (k1 = no plume rise, k7 = strongest)"
+    "Ensemble member (k1 = no plume rise, k7 = strongest)\n"
+    f"Station-months with at least {COV_MIN:.0%} of days measured"
 )
 
 fig.tight_layout()
@@ -254,10 +335,10 @@ fig.savefig(
     bbox_inches="tight",
 )
 
-# fig.savefig(
-#     OVERLEAF_PLOT_DIR / "ensemble_within_r2.pdf",
-#     bbox_inches="tight",
-# )
+fig.savefig(
+    OVERLEAF_PLOT_DIR / "ensemble_within_r2.pdf",
+    bbox_inches="tight",
+)
 
 # ==============================================================================
 # diagnostic output
@@ -280,6 +361,14 @@ diagnostics = res[
 
 print(
     diagnostics.to_string(
+        index=False,
+        float_format=lambda x: f"{x:.4f}",
+    )
+)
+
+print()
+print(
+    selection.to_string(
         index=False,
         float_format=lambda x: f"{x:.4f}",
     )
