@@ -8,7 +8,8 @@ Study period is FY 1974/75-1987/88 (Apr 1974 - Mar 1988); full calendar years
 Pressure-level fields (geopotential, temperature, U/V wind, vertical
 velocity, relative humidity) on eight levels 700-1000 hPa, and single-level
 surface fields (10m winds, 2m temperature, surface pressure, BLH, heat
-fluxes, precipitation, cloud cover), 6-hourly on a box covering Britain.
+fluxes, precipitation, cloud cover), 6-hourly on a box covering Britain. Plus
+a single surface geopotential that is later used in the ARL conversions.
 
 Written to data/raw/pressures and data/raw/singles as monthly GRIB files.
 Downloads skip any target that already exists, so the script can be re-run
@@ -84,6 +85,25 @@ def fetch(dataset, base, year, month, target):
     cdsapi.Client().retrieve(dataset, req, target)
     return f"DONE {os.path.basename(target)}"
 
+
+# Surface geopotential (terrain height): time-invariant, so one timestep is
+# enough. era52arl needs it alongside the monthly surface fields. Skipped if
+# the file is already present, so an existing copy is reused unchanged.
+GEOPOT_DIR = RAW_DIR / "geopot"
+GEOPOT_DIR.mkdir(parents=True, exist_ok=True)
+GEOPOT_TARGET = GEOPOT_DIR / "geopot.grib"
+if not (GEOPOT_TARGET.exists() and GEOPOT_TARGET.stat().st_size > 0):
+    cdsapi.Client().retrieve(
+        "reanalysis-era5-single-levels",
+        {
+            "product_type": ["reanalysis"],
+            "variable": ["geopotential"],
+            "year": ["1981"], "month": ["01"], "day": ["01"], "time": ["00:00"],
+            "data_format": "grib", "download_format": "unarchived",
+            "area": AREA,
+        },
+        str(GEOPOT_TARGET),
+    )
 
 jobs = []
 for y in YEARS:
