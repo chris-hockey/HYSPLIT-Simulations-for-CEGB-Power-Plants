@@ -43,9 +43,7 @@ SAMPLE_HRS = 24        # output averaging interval (daily means)
 NUMPAR = 500_000   # total particles across a full FY (~57/hr release)
 MAXPAR = 100_000    # cap on particles on grid at any instant
 
-# dropbox directory for remotely checking errors
-DROPBOX_DIR = Path(
-    "/home/chris/Royal Holloway Dropbox/Chris Hockey/PhD/cfpp2/"
-    "hysplit/hysplit_simulations/error_log"
-)
-RUN_LOG_PATH = DROPBOX_DIR / "run_log.csv"
+# per-run CSV logs, written inside the repo
+LOG_DIR = PROJECT_ROOT / "logs"
+RUN_LOG_PATH = LOG_DIR / "run_log.csv"
+ENSEMBLE_LOG_PATH = LOG_DIR / "ensemble_run_log.csv"

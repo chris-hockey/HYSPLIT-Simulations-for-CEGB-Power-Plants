@@ -49,8 +49,9 @@ from hysplit.paths import PANEL_PATH, RUN_LOG_PATH
 
 # ==============================================================================
 
+# Run in parallel across 10 cores (change for your own machine)
 MAX_WORKERS = 10
-N_JOBS = None  # Specify a number for a test, None for full run
+N_JOBS = None  # Specify a number for a test of N plant-years, None for full run
 
 LOG_FIELDS = [
     "timestamp",

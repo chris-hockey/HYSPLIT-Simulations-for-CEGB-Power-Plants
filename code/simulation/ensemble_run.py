@@ -34,20 +34,28 @@ from pathlib import Path
 
 import pandas as pd
 from hysplit import AnnualKernel, PlantYear
-from hysplit.paths import DROPBOX_DIR, ENSEMBLE_ROOT, PANEL_PATH
+from hysplit.paths import ENSEMBLE_LOG_PATH, ENSEMBLE_ROOT, PANEL_PATH
 
 # ==============================================================================
 
-ENSEMBLE_LOG_PATH = DROPBOX_DIR / "ensemble_run_log.csv"
-
-YEAR_MAJ = 1981          # calibration financial year: 1 Apr 1981 - 31 Mar 1982
+YEAR_MAJ = 1981  # calibration financial year: 1 Apr 1981 - 31 Mar 1982
+# Run in parallel across 10 cores (change for your own machine)
 MAX_WORKERS = 10
-N_JOBS = None            # dress rehearsal: first N jobs. None for full run.
+N_JOBS = None  # Specify a number for a test of N plant-years, None for full run
 
 LOG_FIELDS = [
-    "timestamp", "batch_id", "hostname",
-    "plant_id", "year_maj", "member_tag", "heat_w",
-    "status", "duration_seconds", "kernel_path", "error_type", "error_msg",
+    "timestamp",
+    "batch_id",
+    "hostname",
+    "plant_id",
+    "year_maj",
+    "member_tag",
+    "heat_w",
+    "status",
+    "duration_seconds",
+    "kernel_path",
+    "error_type",
+    "error_msg",
 ]
 
 
