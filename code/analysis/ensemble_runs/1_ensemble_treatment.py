@@ -272,7 +272,7 @@ if n_na:
     log.warning("%d/%d observed rows have no exposure match",
                 n_na, len(merged))
 
-OUT_DIR.parent.mkdir(parents=True, exist_ok=True)
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 merged.to_csv(OUT_DIR / "ensemble_stations.csv", index=False)
 log.info("saved %s  (%d rows, %d cols)",
          OUT_DIR.name, len(merged), merged.shape[1])

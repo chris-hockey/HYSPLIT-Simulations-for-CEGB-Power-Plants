@@ -31,6 +31,8 @@ PRESSURES_DIR="/home/chris/htest/data/raw/pressures"
 SINGLES_OUT="/home/chris/htest/data/intermediate/all_singles.grib"
 PRESSURES_OUT="/home/chris/htest/data/intermediate/pressure_925_tuv.grib"
 
+mkdir -p "$(dirname "$SINGLES_OUT")"
+
 # check that all 192 files exist (16 years * 12 months)
 EXPECTED=192
 
