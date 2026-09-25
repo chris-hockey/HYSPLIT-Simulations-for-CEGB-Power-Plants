@@ -29,7 +29,6 @@ ENSEMBLE_ROOT = SIM_ROOT / "ensemble_1981"
 RUNS_DIR = SIM_ROOT / "runs"
 ENSEMBLE_RUNS_DIR = ENSEMBLE_ROOT / "runs"
 ANNUAL_DIR = SIM_ROOT / "kernels/annual"
-MONTHLY_DIR = SIM_ROOT / "kernels/monthly"
 
 # grid
 GRID_CENTRE = (53.0, -2.0)  # lat, lon

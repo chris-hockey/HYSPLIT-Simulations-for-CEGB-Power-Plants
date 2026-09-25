@@ -19,8 +19,8 @@ observed pollution in the expected direction, while within R2 remains the
 parameter-selection criterion.
 
 Outputs a 3x2 panel of within R2 profiles (fuel type by pollutant), saved as
-`ensemble_within_r2.pdf` to `plots/` and to the Overleaf technical appendix plot
-directory, and prints the full diagnostics table to stdout.
+`ensemble_within_r2.pdf` to `outputs/` and prints the full diagnostics table to 
+stdout.
 
 Author: Christopher Hockey
 chrishockey2@gmail.com
@@ -56,10 +56,12 @@ warnings.filterwarnings(
 POLLUTION_DATA = (
     PROJECT_ROOT / "data" / "final" / "ensemble_stations.csv"
 )
-PLOT_DIR = PROJECT_ROOT / "plots"
-PLOT_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR = PROJECT_ROOT / "outputs"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 MEMBERS = [f"k{i}" for i in range(1, 8)]
+
+FUELS = ("coal", "oil", "gt")
 
 OUTCOMES = {
     "monthly_mean_so2_ugm3": "Monthly mean SO2 (µg/m³)",
@@ -324,7 +326,7 @@ plt.show()
 # save figure
 # ==============================================================================
 fig.savefig(
-    PLOT_DIR / "ensemble_within_r2.pdf",
+    OUTPUT_DIR / "ensemble_within_r2.pdf",
     bbox_inches="tight",
 )
 

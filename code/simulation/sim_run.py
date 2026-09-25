@@ -1,6 +1,6 @@
 """
 Parallel runner for annual HYSPLIT kernels, with live progress reporting and an 
-append-only CSV log (written to Dropbox).
+append-only CSV log written to logs/.
 
 Builds the (plant_id, year_maj, heat_w) job list from the CEGB panel, and can
 select the first N for a test run (set `N_JOBS = None` for the full run).
@@ -20,8 +20,7 @@ Per-job CSV row appended to `RUN_LOG_PATH`:
 
 Status is OK (ran successfully), SKIPPED (kernel already existed), or FAIL. The 
 log is append-only across batches; one header is written when the file is first 
-created, and every row is flushed immediately so the Dropbox daemon syncs 
-progress in near-real time.
+created.
 
 Failures do not abort the batch. Idempotent via
 `AnnualKernel.already_done()`.
@@ -169,10 +168,9 @@ def run_parallel(
     Run `jobs` across a process pool, logging each result as it completes.
 
     Every job gets a CSV row appended to `log_path` (header written only if the 
-    file is new or empty), flushed after each write so the Dropbox daemon syncs 
-    progress in near-real time and an interrupted batch leaves a usable log. 
-    Progress, running counts and a rough ETA are printed per job; a summary and 
-    the full list of failures print at the end.
+    file is new or empty), flushed after each write so an interrupted batch 
+    leaves a usable log. Progress, running counts and a rough ETA are printed 
+    per job; a summary and the full list of failures print at the end.
 
     The batch is tagged with a `batch_id` and hostname so repeated or resumed
     runs remain distinguishable in the same log file.
@@ -224,7 +222,7 @@ def run_parallel(
                     detail = f"{err_type}: {err_msg}"
                     failures.append((pid, yr, detail))
 
-                # write row + flush so Dropbox picks it up immediately
+                # write row + flush
                 try:
                     writer.writerow({
                         "timestamp":        datetime.now().isoformat(timespec="seconds"),

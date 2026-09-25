@@ -1,8 +1,10 @@
 # data and outputs
 /data/
+/ouputs/
+/logs/
+
+# misc folder from writing the project code
 /papers/
-/plots
-/tables/
 /instructions/
 *.png
 

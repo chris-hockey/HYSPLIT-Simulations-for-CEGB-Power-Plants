@@ -8,8 +8,7 @@ aggregates to months, and reorganises onto April-March financial years. Six
 variables are plotted, each showing `TARGET_YEAR` highlighted against the
 remaining years in grey.
 
-Output: weather_YYYY_YY_comparison.pdf in plots/ and the Overleaf technical
-appendix plot directory.
+Output: weather_YYYY_YY_comparison.pdf in outputs/.
 
 Author: Christopher Hockey
 chrishockey2@gmail.com
@@ -26,11 +25,11 @@ from matplotlib.axes import Axes
 
 # ==============================================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 DATA_DIR = PROJECT_ROOT / "data" / "final" / "merged_weather"
-PLOT_DIR = PROJECT_ROOT / "plots"
-PLOT_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR = PROJECT_ROOT / "plots"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TARGET_YEAR = 1981
 
@@ -243,7 +242,7 @@ plt.show()
 
 # ==============================================================================
 
-out = PLOT_DIR / \
+out = OUTPUT_DIR / \
     f"weather_{TARGET_YEAR}_{(TARGET_YEAR + 1) % 100:02d}_comparison.pdf"
 
 fig.savefig(

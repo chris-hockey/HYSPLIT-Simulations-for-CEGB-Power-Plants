@@ -10,7 +10,7 @@ cross-validation, reported as RMSE in logs and MAPE in levels.
 Fitted values impute the missing heights, flagged by `stack_height_imputed`.
 The panel is written to `data/final/cegb_panel_with_stacks.csv`, the input to
 the simulation pipeline, and the regression table to `stack_height_ols.tex`
-in `tables/` and the Overleaf technical appendix table directory.
+in `outputs/`.
 
 Author: Christopher Hockey
 chrishockey2@gmail.com
@@ -37,8 +37,8 @@ RAW_DIR = PROJECT_ROOT / "data" / "raw"
 
 INT_DIR = PROJECT_ROOT / "data" / "intermediate"
 
-TABLE_DIR = PROJECT_ROOT / "tables"
-TABLE_DIR.mkdir(exist_ok=True, parents=True)
+OUTPUT_DIR = PROJECT_ROOT / "outputs"
+OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 
 OUT_DIR = PROJECT_ROOT / "data" / "final"
 OUT_DIR.mkdir(exist_ok=True, parents=True)
@@ -203,5 +203,5 @@ LOO-CV MAPE (levels)
 \end{{tabular}}
 """
 
-table_path = TABLE_DIR / "stack_height_ols.tex"
+table_path = OUTPUT_DIR / "stack_height_ols.tex"
 table_path.write_text(table_tex.strip() + "\n")

@@ -24,7 +24,7 @@ from pathlib import Path
 
 import xarray as xr
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 logging.basicConfig(
     level=logging.INFO,
