@@ -6,17 +6,6 @@ stations in England and Wales between April 1973 and March 1988. The sample
 contains 186 plants and 1,718 plant-years. The simulations
 were run on Fedora Linux 44. Parts of this repository were written with Claude (Anthropic) under my direction and subsequently checked by me.
 
-> [!NOTE]
-> **Known gap: surface geopotential.** Stage 2 needs a static ERA5 terrain
-> field, `data/raw/geopot/geopot.grib`: the surface geopotential from the
-> `reanalysis-era5-single-levels` dataset. For the original run it was
-> downloaded manually, not by `1_api_calls.py`, so no code in this repository
-> currently produces it. `1_api_calls.py` will be updated to download it once.
-> Until then, request the `geopotential` variable from
-> `reanalysis-era5-single-levels` for a single time step, over the same area as
-> the monthly files (`AREA` in `1_api_calls.py`), in GRIB format. The field
-> does not change over time, so any date will do.
-
 ## Contents
 
 - [What the code does](#what-the-code-does)
@@ -121,11 +110,8 @@ The pipeline has four stages:
 | --- | --- | --- | --- |
 | 1. Power plant data | Cleans the CEGB panel, computes fuel input and the sensible-heat values for plume rise, and imputes missing stack heights | `data_processing/power_plants/`<br>- `1_pp_cleaning.py`<br>- `2_stack_pred.py` | `data/final/cegb_panel_with_stacks.csv` |
 | 2. Meteorology | Downloads ERA5 from the Copernicus Climate Data Store and converts it to HYSPLIT's ARL format | `data_processing/era5/`<br>- `1_api_calls.py`<br>- `2_merge_geopt.sh`<br>- `3_convert_arl.sh`<br>- `configs/era52arl_8lev_reference.cfg` | `data/final/arl/era5_YYYY_MM.arl` |
-| 3. Plume-rise calibration | Runs a 7-member plume-rise ensemble for FY1981/82, selects the member per fuel type that best fits observed SO₂ and black smoke, and checks that FY1981/82 weather was representative of the study period | Ensemble: `simulation/ensemble_run.py`<br><br>Uses `simulation/hysplit/` package<br><br> Analysis: `data_processing/ensemble_runs/` <br>- `1_ensemble_treatment.py`<br>- `2_ensemble_assessment.py`<br><br>Weather check: `average_weather/`<br>- `1_merge_grib.sh`<br>- `2_extract_weather.py`<br>- `3_plot_weather.py` | Ensemble: `data/final/simulation_output/ensemble_1981/` (`runs/`, `kernels/`)<br>Analysis: `data/final/ensemble_stations.csv`, `plots/ensemble_within_r2.pdf`, and the selected members<br>Weather check: `data/final/merged_weather/`, `plots/weather_1981_82_comparison.pdf` |
+| 3. Plume-rise calibration | Runs a 7-member plume-rise ensemble for FY1981/82, selects the member per fuel type that best fits observed SO₂ and black smoke, and checks that FY1981/82 weather was representative of the study period | Ensemble: `simulation/ensemble_run.py`<br><br>Uses `simulation/hysplit/` package<br><br> Analysis: `analysis/ensemble_runs/` <br>- `1_ensemble_treatment.py`<br>- `2_ensemble_assessment.py`<br><br>Weather check: `analysis/average_weather/`<br>- `1_merge_grib.sh`<br>- `2_extract_weather.py`<br>- `3_plot_weather.py` | Ensemble: `data/final/simulation_output/ensemble_1981/` (`runs/`, `kernels/`)<br>Analysis: `data/final/ensemble_stations.csv`, `outputs/ensemble_within_r2.pdf`, and the selected members<br>Weather check: `data/final/merged_weather/`, `outputs/weather_1981_82_comparison.pdf` |
 | 4. Production simulations | Runs every plant-year with its selected plume rise and averages each run to an annual kernel | `simulation/`<br>- `sim_run.py`<br><br>Uses `simulation/hysplit/` package | `data/final/simulation_output/runs/` (one folder per plant-year)<br>`data/final/simulation_output/kernels/annual/` |
-
-`simulation/backfil_kernels.py` is a one-off recovery script that also
-validates the finished kernels (see `docs/authors_notes.md`).
 
 ---
 
@@ -203,13 +189,12 @@ On the original machine, `ECCODES_DEFINITION_PATH` was also set to
 `/usr/share/eccodes/definitions`.
 
 **3. File paths.** The Python scripts find the repository by themselves. The
-remaining machine-specific paths are two settings in
+remaining machine-specific paths are one setting in
 `code/simulation/hysplit/paths.py` and three shell scripts:
 
 | Where | Setting | Points to |
 | --- | --- | --- |
 | `paths.py` | `HYSPLIT_DIR` | the HYSPLIT folder |
-| `paths.py` | `DROPBOX_DIR` | a folder for the run logs (any folder) |
 | `3_convert_arl.sh` | `HYSPLIT_ROOT` | the HYSPLIT folder |
 | `2_merge_geopt.sh`, `3_convert_arl.sh`, `1_merge_grib.sh` | the `htest` link | the repository (see below) |
 
@@ -229,9 +214,6 @@ A few points about these settings:
   `/home/chris/htest`, because HYSPLIT's conversion tools cannot handle long
   file paths. The repository's full paths are 92–136 characters; through the
   link the longest is 77. A replacement link needs a similarly short path.
-- Some lines in `2_stack_pred.py`, `2_ensemble_assessment.py` and
-  `3_plot_weather.py` are commented out. They copied figures and tables into
-  the paper's Overleaf folder, and are kept only as a record.
 
 ### Option B: Docker container
 
@@ -279,20 +261,9 @@ You will need to make sure this file path is set to where you have placed your
 `.cdsapirc`. Stage 2 reads the token to download ERA5, so this
 mount is included on every run.
 
-In the original runs, the run logs were the only output written outside the 
-repository. The batch runners write them to `DROPBOX_DIR` in `code/simulation/hysplit/paths.py`, which currently points to a Dropbox folder. Keeping the logs then needs a third mount, and the whole command looks like this instead:
-
-```bash
-docker run --rm -it \
-  -v "$PWD":/home/chris/Documents/cfpp_hysplit/HYSPLIT-Simulations-for-CEGB-Power-Plants \
-  -v ~/.cdsapirc:/home/chris/.cdsapirc:ro \
-  -v ~/cfpp_logs:"/home/chris/Royal Holloway Dropbox/Chris Hockey/PhD/cfpp2/hysplit/hysplit_simulations/error_log" \
-  cfpp-sim:paper
-```
-Create the host log folder once with `mkdir -p ~/cfpp_logs`.
-
-Setting `DROPBOX_DIR` in `code/simulation/hysplit/paths.py` to a path inside the repository removes the need for the third mount because they are written inside of
-the repo.
+The run logs are written to `logs/` inside the repository, so they reach
+the host through the repository mount already shown. No extra mount is
+needed.
 
 **Checking.** This prints `container OK` if everything the pipeline needs is in
 the image: the libraries for all four HYSPLIT programs, the command-line tools
@@ -328,7 +299,6 @@ except these inputs:
 | `data/raw/cegb_panel.csv` | CEGB plant-year panel: location, capacity, fuel, output, thermal efficiency | Authors' own, will be on GitHub at some point, also distributed with the main paper's replication package |
 | `data/raw/plant_stack_heights.csv` | Observed stack heights | Authors' own - will be distributed here |
 | `data/raw/smokeso2_monthly.csv` | Monthly SO₂ and black smoke at monitoring stations, for calibration | Black Smoke and Sulphur Dioxide Network from the [UK Air Website](https://uk-air.defra.gov.uk/), also distributed from the main replication package |
-| `data/raw/geopot/geopot.grib` | ERA5 surface geopotential (time-invariant), needed by `era52arl` for terrain height | ERA5, downloaded manually; see the note at the top |
 
 ### ERA5 access
 
@@ -381,7 +351,7 @@ python code/data_processing/power_plants/2_stack_pred.py
   heights and checked by leave-one-out cross-validation. Imputed heights are
   flagged. It writes the panel used by the simulations,
   `data/final/cegb_panel_with_stacks.csv`, and the regression table to
-  `tables/`.
+  `outputs/`.
 
 ### Stage 2: meteorology
 
@@ -394,11 +364,14 @@ bash   code/data_processing/era5/3_convert_arl.sh
 - `1_api_calls.py` downloads ERA5 from the Copernicus Climate Data Store: one
   file per month for 1973–1988, 6-hourly, over a box covering Britain. There
   are two files per month: one of fields on eight pressure levels between 700
-  and 1000 hPa and one of surface fields. Files already downloaded are skipped,
-  so it can be restarted after an interruption. This is ran in parallel purely to send as many API requests as possible to speed up the process.
-- `2_merge_geopt.sh` adds terrain height (the static surface geopotential; see
-  the note at the top) to every monthly surface file, one copy per time step,
-  because `era52arl` expects it alongside the other surface fields.
+  and 1000 hPa and one of surface fields. It also fetches the static surface
+  geopotential once, `data/raw/geopot/geopot.grib`, which `2_merge_geopt.sh`
+  needs for terrain height. Files already downloaded are skipped, so it can be
+  restarted after an interruption. This is ran in parallel purely to send as
+  many API requests as possible to speed up the process.
+- `2_merge_geopt.sh` adds terrain height (the static surface geopotential,
+  `data/raw/geopot/geopot.grib`) to every monthly surface file, one copy per
+  time step, because `era52arl` expects it alongside the other surface fields.
 - `3_convert_arl.sh` converts each month to HYSPLIT's ARL format with
   `era52arl`, using the variable and level settings in
   `configs/era52arl_8lev_reference.cfg`, and checks each converted file with
@@ -420,8 +393,8 @@ within the post-1979 data.
 
 ```bash
 python code/simulation/ensemble_run.py
-python code/data_processing/ensemble_runs/1_ensemble_treatment.py
-python code/data_processing/ensemble_runs/2_ensemble_assessment.py
+python code/analysis/ensemble_runs/1_ensemble_treatment.py
+python code/analysis/ensemble_runs/2_ensemble_assessment.py
 ```
 
 - `ensemble_run.py` runs HYSPLIT for every plant operating in FY1981/82 at each
@@ -435,7 +408,7 @@ python code/data_processing/ensemble_runs/2_ensemble_assessment.py
 - `2_ensemble_assessment.py` regresses observed pollution on each candidate's
   exposure, with station and year-month fixed effects, for each fuel type and
   pollutant. It ranks the candidates by within R-squared, and plots the result to
-  `plots/ensemble_within_r2.pdf`.
+  `outputs/ensemble_within_r2.pdf`.
 
 The candidate sensible heat for member *k* is `k_fuel × capacity (MW) × 10⁶`
 watts:
@@ -446,7 +419,7 @@ watts:
 | Oil | 0 | 0.039 | 0.078 | 0.117 | 0.156 | 0.195 | 0.234 |
 | Gas turbine | 0 | 0.5 | 1 | 1.5 | 2 | 2.5 | 3 |
 
-`k1` means no plume rise. The selected members are coal k2, oil k2 and gas
+`k1` means no plume rise. The selected members are coal k2, oil k6 and gas
 turbine k6. They are set in `SELECTED_MEMBER` in `1_pp_cleaning.py`, which
 writes the chosen heat to the panel's `heat_w` column. The ensemble itself uses
 all seven candidate columns, so the stages run once, in order; stage 1 only
@@ -455,9 +428,9 @@ needs re-running if a different selection is made.
 #### Weather check
 
 ```bash
-bash   code/average_weather/1_merge_grib.sh
-python code/average_weather/2_extract_weather.py
-python code/average_weather/3_plot_weather.py
+bash   code/analysis/average_weather/1_merge_grib.sh
+python code/analysis/average_weather/2_extract_weather.py
+python code/analysis/average_weather/3_plot_weather.py
 ```
 
 These check that the calibration year's weather was typical of the sample
@@ -473,7 +446,7 @@ period, using the files from stage 2.
 - `3_plot_weather.py` averages each field over the area (weighting by
   latitude, and summing precipitation), groups the results by month and
   financial year, and plots FY1981/82 against every other year:
-  `plots/weather_1981_82_comparison.pdf`.
+  `outputs/weather_1981_82_comparison.pdf`.
 
 ### Stage 4: production simulations
 
@@ -486,8 +459,6 @@ python code/simulation/sim_run.py
   `data/final/simulation_output/kernels/annual/`. Finished kernels are skipped,
   so an interrupted batch can be restarted, and setting `N_JOBS` limits a test
   to the first few jobs.
-- `backfil_kernels.py` was a one-off: it built kernels from simulations that
-  had finished but not been saved (see the `docs/authors_notes.md`).
 
 The simulation code itself is the `hysplit` package described in
 [About this repository](#about-this-repository): `plant.py`, `run.py` and
@@ -522,15 +493,15 @@ calibration) took about 7.4 days. More detail is `docs/authors_notes.md`.
 └── code/
     ├── data_processing/
     │   ├── power_plants/         stage 1: CEGB panel, heat values, stack heights
-    │   ├── era5/                 stage 2: download, add terrain, convert to ARL
-    │   └── ensemble_runs/        stage 3: station exposure and member selection
-    ├── simulation/
-    │   ├── hysplit/              package: paths and parameters, PlantYear,
-    │   │                         HYSPLITRun, AnnualKernel
-    │   ├── ensemble_run.py       stage 3: FY1981/82 plume-rise ensemble
-    │   ├── sim_run.py            stage 4: production simulations
-    │   └── backfil_kernels.py    one-off recovery of 112 kernels, plus validation
-    └── average_weather/          stage 3: weather check
+    │   └── era5/                 stage 2: download, add terrain, convert to ARL
+    ├── analysis/
+    │   ├── ensemble_runs/        stage 3: station exposure and member selection
+    │   └── average_weather/      stage 3: weather check
+    └── simulation/
+        ├── hysplit/              package: paths, parameters, PlantYear,
+        │                         HYSPLITRun, AnnualKernel, batch runner
+        ├── ensemble_run.py       stage 3: FY1981/82 plume-rise ensemble
+        └── sim_run.py            stage 4: production simulations
 ```
 
 Created by the pipeline and not version-controlled:
@@ -549,7 +520,8 @@ data/
         ├── runs/                     one directory per plant-year
         ├── kernels/annual/           production kernels
         └── ensemble_1981/            calibration runs and kernels
-plots/, tables/                       figures and tables
+outputs/                              figures and the stack-height table
+logs/                                 per-run CSV logs
 ```
 
 ---
