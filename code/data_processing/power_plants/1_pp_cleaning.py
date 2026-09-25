@@ -60,7 +60,7 @@ K_BY_FUEL = {
 # (`ensemble_assessment.py`), indexed to match the `heat_w_k{n}` columns.
 SELECTED_MEMBER = {
     "coal": 2,
-    "oil": 2,
+    "oil": 6,
     "gt": 6,
 }
 
