@@ -114,7 +114,7 @@ for y in YEARS:
         jobs.append(("reanalysis-era5-single-levels", SFC_BASE, y, m,
                      os.path.join(SINGLES_DIR,  f"era5_sfc_an_{tag}.grib")))
 
-MAX_WORKERS = 11
+MAX_WORKERS = 12
 with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
     futures = [ex.submit(fetch, *j) for j in jobs]
     for f in as_completed(futures):
