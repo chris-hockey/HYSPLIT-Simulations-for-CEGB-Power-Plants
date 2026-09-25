@@ -98,7 +98,7 @@ if not (GEOPOT_TARGET.exists() and GEOPOT_TARGET.stat().st_size > 0):
         {
             "product_type": ["reanalysis"],
             "variable": ["geopotential"],
-            "year": ["1981"], "month": ["01"], "day": ["01"], "time": ["00:00"],
+            "year": ["1973"], "month": ["01"], "day": ["01"], "time": ["00:00"],
             "data_format": "grib", "download_format": "unarchived",
             "area": AREA,
         },
